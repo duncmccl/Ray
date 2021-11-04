@@ -134,6 +134,7 @@ unsigned int color_to_int(color_t color) {
 
 void render_image(const camera_t * Camera, const primative_t * primative_list, const unsigned long primative_count, unsigned int * PixelBuffer) {
 	
+	#pragma omp parallel for collapse(2)
 	for(int y = 0; y < Camera->vRES; y++) {
 		for(int x = 0; x < Camera->hRES; x++) {
 			

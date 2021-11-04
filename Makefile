@@ -4,13 +4,13 @@ CFLAGS = -Wall
 all: main
 
 main: main.o Ray.o primative.o
-	$(CC) $(CFLAGS) -o $@ $^ -lm `sdl2-config --cflags --libs`
+	$(CC) $(CFLAGS) -o $@ $^ -lm -fopenmp `sdl2-config --cflags --libs`
 	
 main.o: main.c Ray.h primative.h
-	$(CC) $(CFLAGS) -c $< -lm `sdl2-config --cflags --libs`
+	$(CC) $(CFLAGS) -c $< -lm -fopenmp `sdl2-config --cflags --libs`
 
 Ray.o: Ray.c Ray.h primative.h
-	$(CC) $(CFLAGS) -c $< -lm
+	$(CC) $(CFLAGS) -c $< -lm -fopenmp
 
 primative.o: primative.c primative.h
 	$(CC) $(CFLAGS) -c $< -lm
