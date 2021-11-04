@@ -318,7 +318,7 @@ int main() {
 		
 		// Clear Screen, Optional
 		#pragma omp parallel for
-		for(unsigned long z = 0; z < Camera.hRES * Camera.vRES; z++) {
+		for(int z = 0; z < Camera.hRES * Camera.vRES; z++) {
 			PixelBuffer[z] = 0;
 		}
 		

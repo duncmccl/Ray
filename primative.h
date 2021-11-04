@@ -6,11 +6,11 @@
 
 
 typedef struct {
-	float a, r, g, b;
+	double a, r, g, b;
 } color_t;
 
 typedef struct {
-	float x, y, z;
+	double x, y, z;
 } vec_t;
 
 float vec_dot(vec_t A, vec_t B);
@@ -55,7 +55,7 @@ typedef struct {
 
 typedef struct {
 	
-	float dist;
+	double dist;
 	
 	primative_t primative;
 	
@@ -63,7 +63,7 @@ typedef struct {
 	
 	vec_t normal;
 	
-	float u, v;
+	double u, v;
 	
 } intersect_t;
 
