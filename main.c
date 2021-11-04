@@ -22,7 +22,7 @@ int main() {
 	// Init
 	
 	camera_t Camera;
-	Camera.pos =	(vec_t){0.0f, 0.0f, 0.0f};
+	Camera.pos =	(vec_t){-5.0f, 0.0f, 0.0f};
 	Camera.look =	(vec_t){1.0f, 0.0f, 0.0f};
 	Camera.up =		(vec_t){0.0f, 1.0f, 0.0f};
 	Camera.right =	(vec_t){0.0f, 0.0f, 1.0f};
@@ -51,8 +51,19 @@ int main() {
 	
 	*/
 	
-	primative_t primative_list[] = {};
-	unsigned long primative_count = 0;
+	
+	float rho = 1.0f;
+	float theta = 0.0f;
+	float phi = M_PI / 4.0f;
+	
+	vec_t A = (vec_t){rho * sin(phi) * cos(theta), rho * sin(phi) * sin(theta), rho * cos(phi)};
+	vec_t B = (vec_t){rho * sin(phi) * cos(theta + (2.0f * M_PI / 3.0f)), rho * sin(phi - M_PI) * sin(theta + (2.0f * M_PI / 3.0f)), rho * cos(phi - M_PI)};
+	vec_t C = (vec_t){rho * sin(phi) * cos(theta - (2.0f * M_PI / 3.0f)), rho * sin(phi - M_PI) * sin(theta - (2.0f * M_PI / 3.0f)), rho * cos(phi - M_PI)};
+	
+	triangle_t triangle = (triangle_t){&A, &B, &C};
+	
+	primative_t primative_list[] = {(primative_t){TRIANGLE, &triangle}};
+	unsigned long primative_count = 1;
 	
 	
 	
@@ -280,13 +291,23 @@ int main() {
 		}
 		
 		
-		/*
-		// Clear Screen, Optional
-		#pragma omp parallel for
-		for(unsigned long z = 0; z < Camera.hRes * Camera.vRes; z++) {
-			PixelBuffer[z] = 0;
-		}
-		*/
+		
+		
+		
+		// PHYSICS OR ANYTHING ELSE GOES HERE:
+		theta += M_PI / 16.0f;
+		phi += M_PI / 32.0f;
+
+		A = (vec_t){rho * sin(phi) * cos(theta), rho * sin(phi) * sin(theta), rho * cos(phi)};
+		B = (vec_t){rho * sin(phi) * cos(theta + (2.0f * M_PI / 3.0f)), rho * sin(phi - M_PI) * sin(theta + (2.0f * M_PI / 3.0f)), rho * cos(phi - M_PI)};
+		C = (vec_t){rho * sin(phi) * cos(theta - (2.0f * M_PI / 3.0f)), rho * sin(phi - M_PI) * sin(theta - (2.0f * M_PI / 3.0f)), rho * cos(phi - M_PI)};
+
+		
+		
+		
+		
+		
+		
 		
 		
 		// Render
@@ -294,6 +315,11 @@ int main() {
 		unsigned int * PixelBuffer;
 		int Pitch;
 		SDL_LockTexture(TextureBuffer, NULL, (void**)&PixelBuffer, &Pitch);
+		
+		// Clear Screen, Optional
+		for(unsigned long z = 0; z < Camera.hRES * Camera.vRES; z++) {
+			PixelBuffer[z] = 0;
+		}
 		
 		render_image(&Camera, primative_list, primative_count, PixelBuffer);
 		

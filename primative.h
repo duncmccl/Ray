@@ -6,6 +6,10 @@
 
 
 typedef struct {
+	float a, r, g, b;
+} color_t;
+
+typedef struct {
 	float x, y, z;
 } vec_t;
 
@@ -21,19 +25,25 @@ vec_t vec_scale(vec_t A, float s);
 vec_t vec_rotate(vec_t A, vec_t B, float s);
 
 typedef struct {
-	vec_t A, B, C;
+	vec_t *A, *B, *C;
 } triangle_t;
 
 
 
 typedef struct {
-	vec_t point;
+	vec_t *point;
 	float radius;
 } sphere_t;
 
 
+typedef struct {
+	vec_t * min;
+	vec_t * max;
+} cuboid_t;
 
-enum primative_type {TRIANGLE, SPHERE};
+
+
+enum primative_type {TRIANGLE, SPHERE, CUBOID};
 
 typedef struct {
 	
@@ -47,13 +57,13 @@ typedef struct {
 	
 	float dist;
 	
-	primative_t * primative;
+	primative_t primative;
 	
 	vec_t intersection;
 	
 	vec_t normal;
 	
-	float u, v, w;
+	float u, v;
 	
 } intersect_t;
 
