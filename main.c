@@ -295,8 +295,8 @@ int main() {
 		
 		
 		// PHYSICS OR ANYTHING ELSE GOES HERE:
-		theta += M_PI / 16.0f;
-		phi += M_PI / 32.0f;
+		theta += M_PI / 64.0f;
+		phi += M_PI / 128.0f;
 
 		A = (vec_t){rho * sin(phi) * cos(theta), rho * sin(phi) * sin(theta), rho * cos(phi)};
 		B = (vec_t){rho * sin(phi) * cos(theta + (2.0f * M_PI / 3.0f)), rho * sin(phi - M_PI) * sin(theta + (2.0f * M_PI / 3.0f)), rho * cos(phi - M_PI)};

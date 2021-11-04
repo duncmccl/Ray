@@ -11,7 +11,7 @@ char cast_ray_triangle(const vec_t * RayOri, const vec_t * RayDir, const triangl
 	
 	vec_t norm = vec_cross(AB, AC);
 	
-	vec_scale(norm, 1.0f / sqrt(vec_dot(norm, norm)));
+	norm = vec_scale(norm, 1.0f / sqrt(vec_dot(norm, norm)));
 	
 	float i = vec_dot(*RayDir, norm);
 	
