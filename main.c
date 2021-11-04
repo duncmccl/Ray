@@ -13,7 +13,7 @@
 
 #include <SDL2/SDL.h>
 
-#include "primative.h"
+#include "primitive.h"
 #include "Ray.h"
 
 int main() {
@@ -41,11 +41,11 @@ int main() {
 	float lookSpeed = M_PI / 32.0f;
 	
 	
-	// Make primatives list here!
+	// Make primitives list here!
 	
 	/*
 	
-	Primative are an ENUM and a pointer to the actual data.
+	primitive are an ENUM and a pointer to the actual data.
 	This is done to allow for a single list of multiple diffrent things,
 	such as triangles, spheres, cuboids, etc.
 	
@@ -62,8 +62,20 @@ int main() {
 	
 	triangle_t triangle = (triangle_t){&A, &B, &C};
 	
-	primative_t primative_list[] = {(primative_t){TRIANGLE, &triangle}};
-	unsigned long primative_count = 1;
+	
+	float gamma = 0.0f;
+	float radius = 0.5f;
+	
+	vec_t D = (vec_t){0.0f, 1.0f * sin(gamma), 0.0f};
+	
+	sphere_t sphere = (sphere_t){&D, &radius};
+	
+	
+	primitive_t primitive_list[] = {
+		(primitive_t){TRIANGLE, &triangle},
+		(primitive_t){SPHERE, &sphere}};
+	
+	unsigned long primitive_count = 2;
 	
 	
 	
@@ -301,7 +313,10 @@ int main() {
 		A = (vec_t){rho * sin(phi) * cos(theta), rho * sin(phi) * sin(theta), rho * cos(phi)};
 		B = (vec_t){rho * sin(phi) * cos(theta + (2.0f * M_PI / 3.0f)), rho * sin(phi - M_PI) * sin(theta + (2.0f * M_PI / 3.0f)), rho * cos(phi - M_PI)};
 		C = (vec_t){rho * sin(phi) * cos(theta - (2.0f * M_PI / 3.0f)), rho * sin(phi - M_PI) * sin(theta - (2.0f * M_PI / 3.0f)), rho * cos(phi - M_PI)};
-
+		
+		
+		gamma += M_PI / 32.0f;
+		D = (vec_t){0.0f, 1.0f * sin(gamma), 0.0f};
 		
 		
 		
@@ -322,7 +337,7 @@ int main() {
 			PixelBuffer[z] = 0;
 		}
 		
-		render_image(&Camera, primative_list, primative_count, PixelBuffer);
+		render_image(&Camera, primitive_list, primitive_count, PixelBuffer);
 		
 		SDL_UnlockTexture(TextureBuffer);
 		
@@ -347,7 +362,7 @@ int main() {
 	SDL_Quit();
 	
 	
-	// Destroy Primative list here and things...
+	// Destroy primitive list here and things...
 	
 	
 	

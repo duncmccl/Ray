@@ -1,5 +1,6 @@
 #include "Ray.h"
 
+#include <stdio.h>
 
 char cast_ray_triangle(const vec_t * RayOri, const vec_t * RayDir, const triangle_t * Tri, intersect_t * rtn) {
 	vec_t * A = Tri->A;
@@ -60,7 +61,69 @@ char cast_ray_triangle(const vec_t * RayOri, const vec_t * RayDir, const triangl
 }
 
 
-char cast_ray_sphere(const vec_t * RayOri, const vec_t * RayDir, const sphere_t * Tri, intersect_t * rtn) {
+char cast_ray_sphere(const vec_t * RayOri, const vec_t * RayDir, const sphere_t * Sph, intersect_t * rtn) {
+	/*
+	
+	Ray: origin, direction
+		Ro, Rd
+	
+	Sphere: origin, radius
+		So, Sr
+	
+	X = Ro + Rd * t
+	
+	(X - So) * (X - So) = Sr * Sr
+	
+	((Ro - So) + Rd * t) * ((Ro - So) + Rd * t) = Sr * Sr
+	
+	(Ro - So)*(Ro - So) + 2 * (Ro - So) * Rd * t + Rd * Rd * t * t = Sr * Sr
+	
+	C = (Ro - So) * (Ro - So) - (Sr * Sr)
+	B = 2 * (Ro - So) * Rd
+	A = Rd * Rd
+	
+	At^2 + Bt + C = 0
+	
+	t = (-b+-sqrt(b^2 - 4ac))/2a
+	
+	*/
+	
+	vec_t v0 = vec_sub(*RayOri, (*Sph->ori));
+	
+	float C = vec_dot(v0, v0) - ((*Sph->radius) * (*Sph->radius));
+	float B = 2.0f * vec_dot(v0, *RayDir);
+	float A = vec_dot(*RayDir, *RayDir);
+	
+	
+	
+	if ((B * B) > (4.0f * A * C)) {
+		
+		float t1 = (-B + sqrt((B * B) - (4.0f * A * C))) / (2.0f * A);
+		float t2 = (-B - sqrt((B * B) - (4.0f * A * C))) / (2.0f * A);
+		
+		float t = (t1 > 0.0f ? (t2 > 0.0f ? (t1 < t2 ? t1 : t2) : t1) : (t2 > 0.0f ? t2 : 0.0f));
+		
+		if (rtn->dist > t) {
+			
+			vec_t X = vec_add(*RayOri, vec_scale(*RayDir, t));
+			vec_t norm = vec_sub(X, *Sph->ori);
+			norm = vec_scale(norm, 1.0f / *Sph->radius);
+			
+			float u = (atan(norm.y / norm.x) + M_PI/2.0f) / M_PI;
+			float v = (atan(norm.z / sqrt((norm.x * norm.x) + (norm.y * norm.y))) + M_PI/2.0f) / M_PI;
+			
+			rtn->dist = t;
+			rtn->intersection = X;
+			rtn->normal = norm;
+
+			rtn->u = u;
+			rtn->v = v;
+
+			return 1;
+		}
+	}
+	
+	
 	
 	return 0;
 }
@@ -71,30 +134,30 @@ char cast_ray_cuboid(const vec_t * RayOri, const vec_t * RayDir, const cuboid_t 
 }
 
 
-void trace_ray(const vec_t * RayOri, const vec_t * RayDir, const primative_t * primative_list, const int primative_count, color_t * rtn) {
+void trace_ray(const vec_t * RayOri, const vec_t * RayDir, const primitive_t * primitive_list, const int primitive_count, color_t * rtn) {
 	
 	
 	intersect_t I;
 	I.dist = INFINITY;
 	
-	for(int i = 0; i < primative_count; i++) {
+	for(int i = 0; i < primitive_count; i++) {
 		
-		switch (primative_list[i].type) {
+		switch (primitive_list[i].type) {
 			case TRIANGLE:
-				if (cast_ray_triangle(RayOri, RayDir, (triangle_t *)primative_list[i].data, &I)) {
-					I.primative = primative_list[i];
+				if (cast_ray_triangle(RayOri, RayDir, (triangle_t *)primitive_list[i].data, &I)) {
+					I.primitive = primitive_list[i];
 				}
 				break;
 				
 			case SPHERE:
-				if (cast_ray_sphere(RayOri, RayDir, (sphere_t *)primative_list[i].data, &I)) {
-					I.primative = primative_list[i];
+				if (cast_ray_sphere(RayOri, RayDir, (sphere_t *)primitive_list[i].data, &I)) {
+					I.primitive = primitive_list[i];
 				}
 				break;
 				
 			case CUBOID:
-				if (cast_ray_cuboid(RayOri, RayDir, (cuboid_t *)primative_list[i].data, &I)) {
-					I.primative = primative_list[i];
+				if (cast_ray_cuboid(RayOri, RayDir, (cuboid_t *)primitive_list[i].data, &I)) {
+					I.primitive = primitive_list[i];
 				}
 				break;
 				
@@ -111,7 +174,12 @@ void trace_ray(const vec_t * RayOri, const vec_t * RayDir, const primative_t * p
 		float s = vec_dot(I.normal, *RayDir);
 		s = abs(s);
 		
-		*rtn = (color_t){1.0f, s, s, s};
+		float r = (1.0f - I.u) * (1.0f - I.v);
+		float g = (I.u) * (1.0f - I.v);
+		float b = (1.0f - I.u) * (I.v);
+		
+		
+		*rtn = (color_t){1.0f, s * r, s * g, s * b};
 		
 	} else {
 		*rtn = (color_t){0.0f, 0.0f, 0.0f, 0.0f};
@@ -132,7 +200,7 @@ unsigned int color_to_int(color_t color) {
 	
 }
 
-void render_image(const camera_t * Camera, const primative_t * primative_list, const unsigned long primative_count, unsigned int * PixelBuffer) {
+void render_image(const camera_t * Camera, const primitive_t * primitive_list, const unsigned long primitive_count, unsigned int * PixelBuffer) {
 	
 	#pragma omp parallel for collapse(2)
 	for(int y = 0; y < Camera->vRES; y++) {
@@ -148,7 +216,7 @@ void render_image(const camera_t * Camera, const primative_t * primative_list, c
 			vec_t DIR = vec_rotate(Camera->look, axis, sqrt(Yaw*Yaw + Pitch*Pitch));
 			
 			color_t color = (color_t){0.0, 0.0, 0.0, 0.0};
-			trace_ray(&Camera->pos, &DIR, primative_list, primative_count, &color);
+			trace_ray(&Camera->pos, &DIR, primitive_list, primitive_count, &color);
 			
 			PixelBuffer[x + y * Camera->hRES] = color_to_int(color);
 			

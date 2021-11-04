@@ -1,6 +1,6 @@
 
-#ifndef __PRIMATIVE_H
-#define __PRIMATIVE_H
+#ifndef __primitive_H
+#define __primitive_H
 
 #include <math.h>
 
@@ -31,8 +31,8 @@ typedef struct {
 
 
 typedef struct {
-	vec_t *point;
-	float radius;
+	vec_t *ori;
+	float *radius;
 } sphere_t;
 
 
@@ -43,21 +43,21 @@ typedef struct {
 
 
 
-enum primative_type {TRIANGLE, SPHERE, CUBOID};
+enum primitive_type {TRIANGLE, SPHERE, CUBOID};
 
 typedef struct {
 	
-	enum primative_type type;
+	enum primitive_type type;
 	void * data;
 	
-} primative_t;
+} primitive_t;
 
 
 typedef struct {
 	
 	double dist;
 	
-	primative_t primative;
+	primitive_t primitive;
 	
 	vec_t intersection;
 	
@@ -67,7 +67,7 @@ typedef struct {
 	
 } intersect_t;
 
-void cast_ray(const vec_t * RayOri, const vec_t * RayDir, const primative_t * primative, intersect_t * rtn);
+void cast_ray(const vec_t * RayOri, const vec_t * RayDir, const primitive_t * primitive, intersect_t * rtn);
 
 
 

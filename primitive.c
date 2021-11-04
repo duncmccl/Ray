@@ -1,4 +1,4 @@
-#include "primative.h"
+#include "primitive.h"
 
 
 float vec_dot(const vec_t A, const vec_t B) {
