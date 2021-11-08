@@ -106,7 +106,7 @@ char cast_ray_sphere(const vec_t * RayOri, const vec_t * RayDir, const sphere_t 
 		if (rtn->dist > t) {
 			
 			vec_t X = vec_add(*RayOri, vec_scale(*RayDir, t));
-			vec_t norm = vec_sub(X, *Sph->ori);
+			vec_t norm = vec_sub(X, (*Sph->ori));
 			norm = vec_scale(norm, 1.0f / *Sph->radius);
 			
 			float u = (atan(norm.y / norm.x) + M_PI/2.0f) / M_PI;
@@ -202,24 +202,25 @@ unsigned int color_to_int(color_t color) {
 
 void render_image(const camera_t * Camera, const primitive_t * primitive_list, const unsigned long primitive_count, unsigned int * PixelBuffer) {
 	
-	#pragma omp parallel for collapse(2)
-	for(int y = 0; y < Camera->vRES; y++) {
-		for(int x = 0; x < Camera->hRES; x++) {
-			
-			float Pitch = (Camera->vFOV / 2.0f) - (Camera->vFOV / (float)Camera->vRES) * y;
-			float Yaw = (Camera->hFOV / 2.0f) - (Camera->hFOV / (float)Camera->hRES) * x;
-			
-			vec_t axis = vec_add(vec_scale(Camera->up, Yaw), vec_scale(Camera->right, Pitch));
-			float im = 1.0f / sqrt(vec_dot(axis, axis));
-			axis = vec_scale(axis, im);
-			
-			vec_t DIR = vec_rotate(Camera->look, axis, sqrt(Yaw*Yaw + Pitch*Pitch));
-			
-			color_t color = (color_t){0.0, 0.0, 0.0, 0.0};
-			trace_ray(&Camera->pos, &DIR, primitive_list, primitive_count, &color);
-			
-			PixelBuffer[x + y * Camera->hRES] = color_to_int(color);
-			
-		}
+	#pragma omp parallel for
+	for(int i = 0; i < Camera->vRES * Camera->hRES; i++) {
+		
+		int x = i % Camera->hRES;
+		int y = i / Camera->hRES;
+		
+		float Pitch = (Camera->vFOV / 2.0f) - (Camera->vFOV / (float)Camera->vRES) * y;
+		float Yaw = (Camera->hFOV / 2.0f) - (Camera->hFOV / (float)Camera->hRES) * x;
+
+		vec_t axis = vec_add(vec_scale(Camera->up, Yaw), vec_scale(Camera->right, Pitch));
+		float im = 1.0f / sqrt(vec_dot(axis, axis));
+		axis = vec_scale(axis, im);
+
+		vec_t DIR = vec_rotate(Camera->look, axis, sqrt(Yaw*Yaw + Pitch*Pitch));
+
+		color_t color = (color_t){0.0, 0.0, 0.0, 0.0};
+		trace_ray(&Camera->pos, &DIR, primitive_list, primitive_count, &color);
+
+		PixelBuffer[x + y * Camera->hRES] = color_to_int(color);
+
 	}
 }

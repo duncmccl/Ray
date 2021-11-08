@@ -331,12 +331,6 @@ int main() {
 		int Pitch;
 		SDL_LockTexture(TextureBuffer, NULL, (void**)&PixelBuffer, &Pitch);
 		
-		// Clear Screen, Optional
-		#pragma omp parallel for
-		for(int z = 0; z < Camera.hRES * Camera.vRES; z++) {
-			PixelBuffer[z] = 0;
-		}
-		
 		render_image(&Camera, primitive_list, primitive_count, PixelBuffer);
 		
 		SDL_UnlockTexture(TextureBuffer);

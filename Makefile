@@ -17,4 +17,4 @@ primitive.o: primitive.c primitive.h
 
 clean:
 	rm -rf *.o
-	rm main
+	rm -f main
