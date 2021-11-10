@@ -27,15 +27,15 @@ int main() {
 	Camera.up =		(vec_t){0.0f, 1.0f, 0.0f};
 	Camera.right =	(vec_t){0.0f, 0.0f, 1.0f};
 	
-	Camera.hRES = 512;
-	Camera.vRES = 512;
+	Camera.hRES = 640;
+	Camera.vRES = 360;
 	
 	Camera.hFOV = M_PI / 2.0f;
-	Camera.vFOV = M_PI / 2.0f;
+	Camera.vFOV = Camera.hFOV * ((float)Camera.vRES / (float)Camera.hRES);
 	
 	
-	int window_width = 512;
-	int window_height = 512;
+	int window_width = 1280;
+	int window_height = 720;
 	
 	float moveSpeed = 0.1f;
 	float lookSpeed = M_PI / 32.0f;

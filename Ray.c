@@ -182,7 +182,7 @@ void trace_ray(const vec_t * RayOri, const vec_t * RayDir, const primitive_t * p
 		*rtn = (color_t){1.0f, s * r, s * g, s * b};
 		
 	} else {
-		*rtn = (color_t){0.0f, 0.0f, 0.0f, 0.0f};
+		*rtn = (color_t){0.0f, 0.5f, 0.5f, 0.5f};
 	}
 	
 }
