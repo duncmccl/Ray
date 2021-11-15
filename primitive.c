@@ -29,12 +29,14 @@ vec_t vec_rotate(const vec_t A, const vec_t B, float t) {
 	vec_t w = vec_cross(B, A);
 	vec_t v = vec_cross(w, B);
 	
-	vec_t para = vec_scale(B, vec_dot(A, B));
+	float dAB = ((A.x * B.x) + (A.y * B.y) + (A.z * B.z));
+	float St = sin(t);
+	float Ct = cos(t);
 	
-	vec_t vsin = vec_scale(w, sin(t));
-	
-	vec_t vcos = vec_scale(v, cos(t));
-	
-	return vec_add(para, vec_add(vsin, vcos));
+	return (vec_t){
+		((B.x * dAB) + (w.x * St) + (v.x * Ct)), 
+		((B.y * dAB) + (w.y * St) + (v.y * Ct)), 
+		((B.z * dAB) + (w.z * St) + (v.z * Ct))
+	};
 	
 }
