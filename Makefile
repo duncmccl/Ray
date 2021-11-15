@@ -4,10 +4,10 @@ CFLAGS = -Wall
 all: main
 
 main: main.o Ray.o primitive.o bitmap.o
-	$(CC) $(CFLAGS) -o $@ $^ -lm -fopenmp `sdl2-config --cflags --libs`
+	$(CC) $(CFLAGS) -o $@ $^ -lm -fopenmp
 	
 main.o: main.c Ray.h primitive.h
-	$(CC) $(CFLAGS) -c $< -lm -fopenmp `sdl2-config --cflags --libs`
+	$(CC) $(CFLAGS) -c $< -lm -fopenmp
 
 Ray.o: Ray.c Ray.h primitive.h
 	$(CC) $(CFLAGS) -c $< -lm -fopenmp
