@@ -71,9 +71,11 @@ void destroy_model(model_t * model);
 typedef struct __bvh {
 	
 	vec_t min;
+	vec_t mid;
 	vec_t max;
 	
 	struct __bvh * children[8];
+	int children_count;
 	
 	primitive_t * primative_list;
 	int primative_count;

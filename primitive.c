@@ -43,11 +43,6 @@ vec_t vec_rotate(vec_t A, vec_t B, float t) {
 
 
 
-
-
-
-
-
 model_t * load_model(const char * fname) {
 	return NULL;
 }

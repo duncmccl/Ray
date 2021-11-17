@@ -65,10 +65,10 @@ int cast_ray_triangle(vec_t * RayOri, vec_t * RayDir, triangle_t * Tri, intersec
 int cast_ray_sphere(vec_t * RayOri, vec_t * RayDir, sphere_t * Sph, intersect_t * rtn) {
 	/*
 	
-	Ray: origin, direction
+	Ray: RayOrigin, RayRayDir->zection
 		Ro, Rd
 	
-	Sphere: origin, radius
+	Sphere: RayOrigin, radius
 		So, Sr
 	
 	X = Ro + Rd * t
@@ -165,12 +165,108 @@ int cast_ray_primitive(vec_t * RayOri, vec_t * RayDir, primitive_t * primitive, 
 	}
 }
 
+int cast_ray_bvh(vec_t * RayOri, vec_t * RayDir, bvh_t * bvh, intersect_t * rtn) {
+	
+	if (bvh == NULL) return 0;
+	
+	float tx1 = (bvh->min.x - RayOri->x) / RayDir->x;
+	float tx2 = (bvh->max.x - RayOri->x) / RayDir->x;
+	float tx3 = (bvh->mid.x - RayOri->x) / RayDir->x;
+	
+	float ty1 = (bvh->min.y - RayOri->y) / RayDir->y;
+	float ty2 = (bvh->max.y - RayOri->y) / RayDir->y;
+	float ty3 = (bvh->mid.y - RayOri->y) / RayDir->y;
+	
+	float tz1 = (bvh->min.z - RayOri->z) / RayDir->z;
+	float tz2 = (bvh->max.z - RayOri->z) / RayDir->z;
+	float tz3 = (bvh->mid.z - RayOri->z) / RayDir->z;
+	
+	if (tx1 > tx2) {
+		float tmp = tx1;
+		tx1 = tx2;
+		tx2 = tmp;
+	}
+	if (ty1 > ty2) {
+		float tmp = ty1;
+		ty1 = ty2;
+		ty2 = tmp;
+	}
+	if (tz1 > tz2) {
+		float tmp = tz1;
+		tz1 = tz2;
+		tz2 = tmp;
+	}
+	
+	float tmp_min = tx1;
+	if (ty1 > tmp_min) tmp_min = ty1;
+	if (tz1 > tmp_min) tmp_min = tz1;
+	
+	float tmp_max = tx2;
+	if (ty2 < tmp_max) tmp_max = ty2;
+	if (tz2 < tmp_max) tmp_max = tz2;
+	
+	
+	if (tmp_max < 0.0f || tmp_max < tmp_min) return 0;
+	
+	// The following code will determine the order of children of the bvh to check, and check them.
+	// If you have questions on how this works, email me: duncmccl@udel.edu
+	// I will provide an unobfuscated version
+	
+	if (bvh->children_count > 0) {
+		
+		unsigned char index = 
+			(((RayDir->z > 0.0f) ^ (tz3 > tmp_min))<<2) | 
+			(((RayDir->y > 0.0f) ^ (ty3 > tmp_min))<<1) | 
+			(((RayDir->x > 0.0f) ^ (tx3 > tmp_min)));
+		
+		int A = cast_ray_bvh(RayOri, RayDir, bvh->children[index], rtn);
+		if (A) return A;
+		
+		float P[] = {
+			1.0f / (tx3 - tmp_min),
+			1.0f / (ty3 - tmp_min),
+			1.0f / (tz3 - tmp_min)
+		};
+		unsigned char order = 
+			((P[0] >= P[1]) << 4) | 
+			((P[0] >= P[2]) << 3) | 
+			((P[1] >= P[2]) << 2);
+		const unsigned char search[32] = {
+			2, 1, 0, 255,
+			1, 2, 0, 255,
+			255,255,255,255,
+			1, 0, 2, 255,
+			2, 0, 1, 255,
+			255,255,255, 255,
+			0, 2, 1, 255,
+			0, 1, 2, 255
+		};
+		while(search[order] != 255) {
+			if (P[search[order]] <= 0) return 0;
+			index ^= 1 << search[order];
+			A = cast_ray_bvh(RayOri, RayDir, bvh->children[index], rtn);
+			if (A) return A;
+			order++;
+		}
+		
+		return 0;
+
+	} else {
+		// Calls to check triangle contents
+		int A = 0;
+		for(int i = 0; i < bvh->primative_count; i++) {
+			int B = cast_ray_primitive(RayOri, RayDir, bvh->primative_list + i, rtn);
+			if (B) A = B;
+		}
+		return A;
+	}
+	
+}
 
 
 
-
-
-void trace_ray(vec_t * RayOri, vec_t * RayDir, primitive_t * primitive_list, int primitive_count, color_t * rtn) {
+// TODO: Replace primative list with a BVH
+void trace_ray(vec_t * RayOri, vec_t * RayRayDir, primitive_t * primitive_list, int primitive_count, color_t * rtn) {
 	
 	
 	intersect_t I;
@@ -178,14 +274,17 @@ void trace_ray(vec_t * RayOri, vec_t * RayDir, primitive_t * primitive_list, int
 	
 	for(int i = 0; i < primitive_count; i++) {
 		
-		cast_ray_primitive(RayOri, RayDir, primitive_list + i, &I);
+		cast_ray_primitive(RayOri, RayRayDir, primitive_list + i, &I);
 		
 	}
 	
 	
 	if (I.dist < INFINITY) {
 		
-		float s = vec_dot(I.normal, *RayDir);
+		// This is where recursive calls would go, for reflections, refractions, lighting etc.
+		
+		
+		float s = vec_dot(I.normal, *RayRayDir);
 		s = abs(s);
 		
 		float r = (1.0f - I.u) * (1.0f - I.v);
@@ -229,10 +328,10 @@ void render_image(camera_t * Camera, primitive_t * primitive_list, unsigned long
 		float im = 1.0f / sqrt(vec_dot(axis, axis));
 		axis = vec_scale(axis, im);
 
-		vec_t DIR = vec_rotate(Camera->look, axis, sqrt(Yaw*Yaw + Pitch*Pitch));
+		vec_t RayDir = vec_rotate(Camera->look, axis, sqrt(Yaw*Yaw + Pitch*Pitch));
 
 		color_t color = (color_t){0.0, 0.0, 0.0, 0.0};
-		trace_ray(&Camera->pos, &DIR, primitive_list, primitive_count, &color);
+		trace_ray(&Camera->pos, &RayDir, primitive_list, primitive_count, &color);
 
 		PixelBuffer[x + y * Camera->hRES] = color_to_int(color);
 
