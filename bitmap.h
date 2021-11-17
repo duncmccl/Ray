@@ -4,6 +4,6 @@
 
 #include <stdio.h>
 
-void save_bmp(const unsigned char * data, int width, int height, char * title);
+void save_bmp(unsigned char * data, int width, int height, char * title);
 
 #endif

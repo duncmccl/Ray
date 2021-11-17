@@ -29,7 +29,6 @@ typedef struct {
 } triangle_t;
 
 
-
 typedef struct {
 	vec_t *ori;
 	float *radius;
@@ -53,21 +52,37 @@ typedef struct {
 } primitive_t;
 
 
+
+
 typedef struct {
 	
-	double dist;
+	vec_t * vec_list;
 	
-	primitive_t primitive;
+	primative_t * primative_list;
+	int primative_count;
 	
-	vec_t intersection;
-	
-	vec_t normal;
-	
-	double u, v;
-	
-} intersect_t;
+} model_t;
 
-void cast_ray(const vec_t * RayOri, const vec_t * RayDir, const primitive_t * primitive, intersect_t * rtn);
+model_t * load_model(const char * fname);
+void destroy_model(model_t * model);
+
+
+
+typedef struct __bvh {
+	
+	vec_t min;
+	vec_t max;
+	
+	struct __bvh * children;
+	
+	primitive_t * primative_list;
+	int primative_count;
+	
+} bvh_t;
+
+bvh_t * build_bvh(model_t * model);
+void destroy_bvh(bvh_t * bvh);
+
 
 
 

@@ -1,29 +1,29 @@
 #include "primitive.h"
 
 
-float vec_dot(const vec_t A, const vec_t B) {
+float vec_dot(vec_t A, vec_t B) {
 	return (A.x * B.x) + (A.y * B.y) + (A.z * B.z);
 }
 
-vec_t vec_cross(const vec_t A, const vec_t B) {
+vec_t vec_cross(vec_t A, vec_t B) {
 	return (vec_t){((A.y * B.z) - (A.z * B.y)), 
 				   ((A.z * B.x) - (A.x * B.z)), 
 				   ((A.x * B.y) - (A.y * B.x))};
 }
 
-vec_t vec_scale(const vec_t A, float s) {
+vec_t vec_scale(vec_t A, float s) {
 	return (vec_t){A.x * s, A.y * s, A.z * s};
 }
 
-vec_t vec_add(const vec_t A, const vec_t B) {
+vec_t vec_add(vec_t A, vec_t B) {
 	return (vec_t){A.x + B.x, A.y + B.y, A.z + B.z};
 }
 
-vec_t vec_sub(const vec_t A, const vec_t B) {
+vec_t vec_sub(vec_t A, vec_t B) {
 	return (vec_t){A.x - B.x, A.y - B.y, A.z - B.z};
 }
 
-vec_t vec_rotate(const vec_t A, const vec_t B, float t) {
+vec_t vec_rotate(vec_t A, vec_t B, float t) {
 	// Ru(t)x = u * DOT(u, x) + cos(t) * CROSS(CROSS(u, x), u) + sin(t) * CROSS(u, x)
 	
 	vec_t w = vec_cross(B, A);

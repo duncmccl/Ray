@@ -2,7 +2,8 @@
 
 #include <stdio.h>
 
-char cast_ray_triangle(const vec_t * RayOri, const vec_t * RayDir, const triangle_t * Tri, intersect_t * rtn) {
+
+int cast_ray_triangle(vec_t * RayOri, vec_t * RayDir, triangle_t * Tri, intersect_t * rtn) {
 	vec_t * A = Tri->A;
 	vec_t * B = Tri->B;
 	vec_t * C = Tri->C;
@@ -61,7 +62,7 @@ char cast_ray_triangle(const vec_t * RayOri, const vec_t * RayDir, const triangl
 }
 
 
-char cast_ray_sphere(const vec_t * RayOri, const vec_t * RayDir, const sphere_t * Sph, intersect_t * rtn) {
+int cast_ray_sphere(vec_t * RayOri, vec_t * RayDir, sphere_t * Sph, intersect_t * rtn) {
 	/*
 	
 	Ray: origin, direction
@@ -128,13 +129,48 @@ char cast_ray_sphere(const vec_t * RayOri, const vec_t * RayDir, const sphere_t 
 	return 0;
 }
 
-char cast_ray_cuboid(const vec_t * RayOri, const vec_t * RayDir, const cuboid_t * Tri, intersect_t * rtn) {
+int cast_ray_cuboid(vec_t * RayOri, vec_t * RayDir, cuboid_t * Tri, intersect_t * rtn) {
 	
 	return 0;
 }
 
 
-void trace_ray(const vec_t * RayOri, const vec_t * RayDir, const primitive_t * primitive_list, const int primitive_count, color_t * rtn) {
+int cast_ray_primitive(vec_t * RayOri, vec_t * RayDir, primitive_t * primitive, intersect_t * rtn) {
+	int A = 0;
+	switch (primitive->type) {
+		case TRIANGLE:
+			A = cast_ray_triangle(RayOri, RayDir, (triangle_t *)(primitive->data), rtn);
+			if (A != 0) {
+				rtn->primitive = primitive;
+			}
+			return A;
+
+		case SPHERE:
+			A = cast_ray_sphere(RayOri, RayDir, (sphere_t *)(primitive->data), rtn);
+			if (A != 0) {
+				rtn->primitive = primitive;
+			}
+			return A;
+
+		case CUBOID:
+			A = cast_ray_cuboid(RayOri, RayDir, (cuboid_t *)(primitive->data), rtn);
+			if (A != 0) {
+				rtn->primitive = primitive;
+			}
+			return A;
+
+		default:
+			return 0;
+
+	}
+}
+
+
+
+
+
+
+void trace_ray(vec_t * RayOri, vec_t * RayDir, primitive_t * primitive_list, int primitive_count, color_t * rtn) {
 	
 	
 	intersect_t I;
@@ -142,29 +178,7 @@ void trace_ray(const vec_t * RayOri, const vec_t * RayDir, const primitive_t * p
 	
 	for(int i = 0; i < primitive_count; i++) {
 		
-		switch (primitive_list[i].type) {
-			case TRIANGLE:
-				if (cast_ray_triangle(RayOri, RayDir, (triangle_t *)primitive_list[i].data, &I)) {
-					I.primitive = primitive_list[i];
-				}
-				break;
-				
-			case SPHERE:
-				if (cast_ray_sphere(RayOri, RayDir, (sphere_t *)primitive_list[i].data, &I)) {
-					I.primitive = primitive_list[i];
-				}
-				break;
-				
-			case CUBOID:
-				if (cast_ray_cuboid(RayOri, RayDir, (cuboid_t *)primitive_list[i].data, &I)) {
-					I.primitive = primitive_list[i];
-				}
-				break;
-				
-			default:
-				break;
-				
-		}
+		cast_ray_primitive(RayOri, RayDir, primitive_list + i, &I);
 		
 	}
 	
@@ -200,7 +214,7 @@ unsigned int color_to_int(color_t color) {
 	
 }
 
-void render_image(const camera_t * Camera, const primitive_t * primitive_list, const unsigned long primitive_count, unsigned int * PixelBuffer) {
+void render_image(camera_t * Camera, primitive_t * primitive_list, unsigned long primitive_count, unsigned int * PixelBuffer) {
 	
 	#pragma omp parallel for
 	for(int i = 0; i < Camera->vRES * Camera->hRES; i++) {

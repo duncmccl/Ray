@@ -1,9 +1,9 @@
 #include "bitmap.h"
 
 
-const int BYTES_PER_PIXEL = 4;
-const int BITMAP_FILE_HEADER_SIZE = 14;
-const int BITMAP_INFO_HEADER_SIZE = 40;
+int BYTES_PER_PIXEL = 4;
+int BITMAP_FILE_HEADER_SIZE = 14;
+int BITMAP_INFO_HEADER_SIZE = 40;
 
 unsigned char* createBitmapFileHeader(int height, int stride) {
 	
@@ -58,7 +58,7 @@ unsigned char* createBitmapInfoHeader (int height, int width) {
     return infoHeader;
 }
 
-void save_bmp(const unsigned char * data, int width, int height, char * title) {
+void save_bmp(unsigned char * data, int width, int height, char * title) {
 	
 	int widthBytes = width * BYTES_PER_PIXEL;
 	
