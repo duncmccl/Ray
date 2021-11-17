@@ -58,8 +58,8 @@ typedef struct {
 	
 	vec_t * vec_list;
 	
-	primative_t * primative_list;
-	int primative_count;
+	primitive_t * primitive_list;
+	int primitive_count;
 	
 } model_t;
 
@@ -73,7 +73,7 @@ typedef struct __bvh {
 	vec_t min;
 	vec_t max;
 	
-	struct __bvh * children;
+	struct __bvh * children[8];
 	
 	primitive_t * primative_list;
 	int primative_count;

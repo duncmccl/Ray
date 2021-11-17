@@ -40,3 +40,36 @@ vec_t vec_rotate(vec_t A, vec_t B, float t) {
 	};
 	
 }
+
+
+
+
+
+
+
+
+model_t * load_model(const char * fname) {
+	return NULL;
+}
+void destroy_model(model_t * model) {
+	if (model) {
+		free(model->vec_list);
+		for(int i = 0; i < model->primitive_count; i++)
+			free(model->primitive_list[i].data);
+		free(model->primitive_list);
+		free(model);
+	}
+}
+
+
+bvh_t * build_bvh(model_t * model) {
+	return NULL;
+}
+void destroy_bvh(bvh_t * bvh) {
+	if (bvh) {
+		for(int i = 0; i < 8; i++) destroy_bvh(bvh->children[i]);
+		free(bvh->primative_list);
+		free(bvh);
+	}
+}
+
