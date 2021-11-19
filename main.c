@@ -68,11 +68,15 @@ int main() {
 	sphere_t sphere = (sphere_t){&D, &radius};
 	
 	
-	primitive_t primitive_list[] = {
-		(primitive_t){TRIANGLE, &triangle},
-		(primitive_t){SPHERE, &sphere}};
-	
+	primitive_t primitive_list[2];
 	unsigned long primitive_count = 2;
+	
+	primitive_list[0].type = TRIANGLE;
+	primitive_list[0].data.triangle = triangle;
+	
+	primitive_list[1].type = SPHERE;
+	primitive_list[1].data.sphere = sphere;
+	
 	
 	
 	

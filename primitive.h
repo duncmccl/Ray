@@ -47,7 +47,14 @@ enum primitive_type {TRIANGLE, SPHERE, CUBOID};
 typedef struct {
 	
 	enum primitive_type type;
-	void * data;
+	
+	union primitive_data {
+		
+		triangle_t triangle;
+		sphere_t sphere;
+		cuboid_t cuboid;
+		
+	} data;
 	
 } primitive_t;
 
@@ -57,6 +64,7 @@ typedef struct {
 typedef struct {
 	
 	vec_t * vec_list;
+	int vec_count;
 	
 	primitive_t * primitive_list;
 	int primitive_count;
@@ -64,6 +72,7 @@ typedef struct {
 } model_t;
 
 model_t * load_model(const char * fname);
+model_t * aggregate_models(model_t * model_list, int model_count);
 void destroy_model(model_t * model);
 
 
@@ -77,8 +86,8 @@ typedef struct __bvh {
 	struct __bvh * children[8];
 	int children_count;
 	
-	primitive_t * primative_list;
-	int primative_count;
+	primitive_t * primitive_list;
+	int primitive_count;
 	
 } bvh_t;
 

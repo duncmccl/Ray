@@ -129,7 +129,7 @@ int cast_ray_sphere(vec_t * RayOri, vec_t * RayDir, sphere_t * Sph, intersect_t 
 	return 0;
 }
 
-int cast_ray_cuboid(vec_t * RayOri, vec_t * RayDir, cuboid_t * Tri, intersect_t * rtn) {
+int cast_ray_cuboid(vec_t * RayOri, vec_t * RayDir, cuboid_t * cuboid, intersect_t * rtn) {
 	
 	return 0;
 }
@@ -139,21 +139,21 @@ int cast_ray_primitive(vec_t * RayOri, vec_t * RayDir, primitive_t * primitive, 
 	int A = 0;
 	switch (primitive->type) {
 		case TRIANGLE:
-			A = cast_ray_triangle(RayOri, RayDir, (triangle_t *)(primitive->data), rtn);
+			A = cast_ray_triangle(RayOri, RayDir, (triangle_t *)(&primitive->data.triangle), rtn);
 			if (A != 0) {
 				rtn->primitive = primitive;
 			}
 			return A;
 
 		case SPHERE:
-			A = cast_ray_sphere(RayOri, RayDir, (sphere_t *)(primitive->data), rtn);
+			A = cast_ray_sphere(RayOri, RayDir, (sphere_t *)(&primitive->data.sphere), rtn);
 			if (A != 0) {
 				rtn->primitive = primitive;
 			}
 			return A;
 
 		case CUBOID:
-			A = cast_ray_cuboid(RayOri, RayDir, (cuboid_t *)(primitive->data), rtn);
+			A = cast_ray_cuboid(RayOri, RayDir, (cuboid_t *)(&primitive->data.cuboid), rtn);
 			if (A != 0) {
 				rtn->primitive = primitive;
 			}
@@ -254,8 +254,8 @@ int cast_ray_bvh(vec_t * RayOri, vec_t * RayDir, bvh_t * bvh, intersect_t * rtn)
 	} else {
 		// Calls to check triangle contents
 		int A = 0;
-		for(int i = 0; i < bvh->primative_count; i++) {
-			int B = cast_ray_primitive(RayOri, RayDir, bvh->primative_list + i, rtn);
+		for(int i = 0; i < bvh->primitive_count; i++) {
+			int B = cast_ray_primitive(RayOri, RayDir, bvh->primitive_list + i, rtn);
 			if (B) A = B;
 		}
 		return A;
