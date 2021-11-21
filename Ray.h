@@ -26,6 +26,6 @@ int cast_ray_bvh(vec_t * RayOri, vec_t * RayDir, bvh_t * bvh, intersect_t * rtn)
 
 
 
-void render_image(camera_t * Camera, primitive_t * primitive_list, unsigned long primitive_count, unsigned int * PixelBuffer);
+void render_image(camera_t * Camera, bvh_t * bvh, unsigned int * PixelBuffer);
 
 #endif

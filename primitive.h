@@ -24,6 +24,7 @@ vec_t vec_scale(vec_t A, float s);
 
 vec_t vec_rotate(vec_t A, vec_t B, float s);
 
+
 typedef struct {
 	vec_t *A, *B, *C;
 } triangle_t;
@@ -31,7 +32,7 @@ typedef struct {
 
 typedef struct {
 	vec_t *ori;
-	float *radius;
+	double *radius;
 } sphere_t;
 
 
@@ -42,7 +43,7 @@ typedef struct {
 
 
 
-enum primitive_type {TRIANGLE, SPHERE, CUBOID};
+enum primitive_type {INVALID, TRIANGLE, SPHERE, CUBOID};
 
 typedef struct {
 	
@@ -72,7 +73,9 @@ typedef struct {
 } model_t;
 
 model_t * load_model(const char * fname);
-model_t * aggregate_models(model_t * model_list, int model_count);
+model_t * aggregate_models(model_t ** model_list, int model_count);
+model_t * copy_model(model_t * target);
+void trans_rotate_model(model_t * target, vec_t * look, vec_t * up, vec_t * right, vec_t * pos);
 void destroy_model(model_t * model);
 
 
@@ -91,7 +94,7 @@ typedef struct __bvh {
 	
 } bvh_t;
 
-bvh_t * build_bvh(model_t * model);
+bvh_t * build_bvh(model_t * model, int limit, int depth);
 void destroy_bvh(bvh_t * bvh);
 
 

@@ -266,17 +266,13 @@ int cast_ray_bvh(vec_t * RayOri, vec_t * RayDir, bvh_t * bvh, intersect_t * rtn)
 
 
 // TODO: Replace primative list with a BVH
-void trace_ray(vec_t * RayOri, vec_t * RayRayDir, primitive_t * primitive_list, int primitive_count, color_t * rtn) {
+void trace_ray(vec_t * RayOri, vec_t * RayRayDir, bvh_t * bvh, color_t * rtn) {
 	
 	
 	intersect_t I;
 	I.dist = INFINITY;
 	
-	for(int i = 0; i < primitive_count; i++) {
-		
-		cast_ray_primitive(RayOri, RayRayDir, primitive_list + i, &I);
-		
-	}
+	cast_ray_bvh(RayOri, RayRayDir, bvh, &I);
 	
 	
 	if (I.dist < INFINITY) {
@@ -313,7 +309,7 @@ unsigned int color_to_int(color_t color) {
 	
 }
 
-void render_image(camera_t * Camera, primitive_t * primitive_list, unsigned long primitive_count, unsigned int * PixelBuffer) {
+void render_image(camera_t * Camera, bvh_t * bvh, unsigned int * PixelBuffer) {
 	
 	#pragma omp parallel for
 	for(int i = 0; i < Camera->vRES * Camera->hRES; i++) {
@@ -321,7 +317,7 @@ void render_image(camera_t * Camera, primitive_t * primitive_list, unsigned long
 		int x = i % Camera->hRES;
 		int y = i / Camera->hRES;
 		
-		float Pitch = (Camera->vFOV / 2.0f) - (Camera->vFOV / (float)Camera->vRES) * y;
+		float Pitch = (Camera->vFOV / (float)Camera->vRES) * y - (Camera->vFOV / 2.0f);
 		float Yaw = (Camera->hFOV / 2.0f) - (Camera->hFOV / (float)Camera->hRES) * x;
 
 		vec_t axis = vec_add(vec_scale(Camera->up, Yaw), vec_scale(Camera->right, Pitch));
@@ -331,7 +327,7 @@ void render_image(camera_t * Camera, primitive_t * primitive_list, unsigned long
 		vec_t RayDir = vec_rotate(Camera->look, axis, sqrt(Yaw*Yaw + Pitch*Pitch));
 
 		color_t color = (color_t){0.0, 0.0, 0.0, 0.0};
-		trace_ray(&Camera->pos, &RayDir, primitive_list, primitive_count, &color);
+		trace_ray(&Camera->pos, &RayDir, bvh, &color);
 
 		PixelBuffer[x + y * Camera->hRES] = color_to_int(color);
 
