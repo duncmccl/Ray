@@ -1,5 +1,5 @@
 # Ray
-A C Ray Trace program for simple Primatives
+A C Ray Trace program for simple Primitives
 
 This program uses the tiny obj loader from:
 	https://github.com/tinyobjloader/tinyobjloader
