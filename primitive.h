@@ -6,11 +6,11 @@
 
 
 typedef struct {
-	double a, r, g, b;
+	float a, r, g, b;
 } color_t;
 
 typedef struct {
-	double x, y, z;
+	float x, y, z;
 } vec_t;
 
 float vec_dot(vec_t A, vec_t B);
@@ -26,24 +26,24 @@ vec_t vec_rotate(vec_t A, vec_t B, float s);
 
 
 typedef struct {
-	vec_t *A, *B, *C;
+	int A, B, C;
 } triangle_t;
 
 
 typedef struct {
-	vec_t *ori;
-	double *radius;
-} sphere_t;
+	int origin;
+	int radius;
+} ellipsoid_t;
 
 
 typedef struct {
-	vec_t * min;
-	vec_t * max;
+	int min;
+	int max;
 } cuboid_t;
 
 
 
-enum primitive_type {INVALID, TRIANGLE, SPHERE, CUBOID};
+enum primitive_type {INVALID, TRIANGLE, ELLIPSOID, CUBOID};
 
 typedef struct {
 	
@@ -52,7 +52,7 @@ typedef struct {
 	union primitive_data {
 		
 		triangle_t triangle;
-		sphere_t sphere;
+		ellipsoid_t ellipsoid;
 		cuboid_t cuboid;
 		
 	} data;

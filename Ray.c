@@ -3,10 +3,10 @@
 #include <stdio.h>
 
 
-int cast_ray_triangle(vec_t * RayOri, vec_t * RayDir, triangle_t * Tri, intersect_t * rtn) {
-	vec_t * A = Tri->A;
-	vec_t * B = Tri->B;
-	vec_t * C = Tri->C;
+int cast_ray_triangle(vec_t * RayOri, vec_t * RayDir, triangle_t * triangle, vec_t * vec_list, intersect_t * rtn) {
+	vec_t * A = vec_list + triangle->A;
+	vec_t * B = vec_list + triangle->B;
+	vec_t * C = vec_list + triangle->C;
 	
 	vec_t AB = vec_sub(*B, *A);
 	vec_t AC = vec_sub(*C, *A);
@@ -62,38 +62,36 @@ int cast_ray_triangle(vec_t * RayOri, vec_t * RayDir, triangle_t * Tri, intersec
 }
 
 
-int cast_ray_sphere(vec_t * RayOri, vec_t * RayDir, sphere_t * Sph, intersect_t * rtn) {
+int cast_ray_ellipsoid(vec_t * RayOri, vec_t * RayDir, ellipsoid_t * ellipsoid, vec_t * vec_list, intersect_t * rtn) {
 	/*
 	
 	Ray: RayOrigin, RayRayDir->zection
 		Ro, Rd
 	
-	Sphere: RayOrigin, radius
-		So, Sr
+	Ellipseoid: origin, radius
+		Eo, Er
 	
-	X = Ro + Rd * t
+	I = Ro + Rd * t
 	
-	(X - So) * (X - So) = Sr * Sr
+	( (I - So) / Sr ) dot ((I - So) / Sr) == 1
 	
-	((Ro - So) + Rd * t) * ((Ro - So) + Rd * t) = Sr * Sr
+	V0 = Ro - Eo
 	
-	(Ro - So)*(Ro - So) + 2 * (Ro - So) * Rd * t + Rd * Rd * t * t = Sr * Sr
+	A = (Rd / Er) . (Rd / Er)
+	B = 2.0f * (Rd / Er) . (V0 / Er)
+	C = (V0 / Er) . (V0 / Er) - 1
 	
-	C = (Ro - So) * (Ro - So) - (Sr * Sr)
-	B = 2 * (Ro - So) * Rd
-	A = Rd * Rd
-	
-	At^2 + Bt + C = 0
-	
-	t = (-b+-sqrt(b^2 - 4ac))/2a
 	
 	*/
 	
-	vec_t v0 = vec_sub(*RayOri, (*Sph->ori));
 	
-	float C = vec_dot(v0, v0) - ((*Sph->radius) * (*Sph->radius));
-	float B = 2.0f * vec_dot(v0, *RayDir);
-	float A = vec_dot(*RayDir, *RayDir);
+	vec_t Er = *(vec_list + ellipsoid->radius);
+	vec_t Rd = *RayDir;
+	vec_t v0 = vec_sub(*RayOri, *(vec_list + ellipsoid->origin));
+	
+	float C = (((v0.x * v0.x) / (Er.x * Er.x)) + ((v0.y * v0.y) / (Er.y * Er.y)) + ((v0.z * v0.z) / (Er.z * Er.z))) - 1.0f;
+	float B = 2.0f * (((Rd.x * v0.x) / (Er.x * Er.x)) + ((Rd.y * v0.y) / (Er.y * Er.y)) + ((Rd.z * v0.z) / (Er.z * Er.z)));
+	float A = (((Rd.x * Rd.x) / (Er.x * Er.x)) + ((Rd.y * Rd.y) / (Er.y * Er.y)) + ((Rd.z * Rd.z) / (Er.z * Er.z)));
 	
 	
 	
@@ -107,8 +105,8 @@ int cast_ray_sphere(vec_t * RayOri, vec_t * RayDir, sphere_t * Sph, intersect_t 
 		if (rtn->dist > t) {
 			
 			vec_t X = vec_add(*RayOri, vec_scale(*RayDir, t));
-			vec_t norm = vec_sub(X, (*Sph->ori));
-			norm = vec_scale(norm, 1.0f / *Sph->radius);
+			vec_t norm = vec_sub(X, *(vec_list + ellipsoid->origin));
+			norm = vec_scale(norm, 1.0f / vec_dot(norm, norm));
 			
 			float u = (atan(norm.y / norm.x) + M_PI/2.0f) / M_PI;
 			float v = (atan(norm.z / sqrt((norm.x * norm.x) + (norm.y * norm.y))) + M_PI/2.0f) / M_PI;
@@ -129,31 +127,31 @@ int cast_ray_sphere(vec_t * RayOri, vec_t * RayDir, sphere_t * Sph, intersect_t 
 	return 0;
 }
 
-int cast_ray_cuboid(vec_t * RayOri, vec_t * RayDir, cuboid_t * cuboid, intersect_t * rtn) {
+int cast_ray_cuboid(vec_t * RayOri, vec_t * RayDir, cuboid_t * cuboid, vec_t * vec_list, intersect_t * rtn) {
 	
 	return 0;
 }
 
 
-int cast_ray_primitive(vec_t * RayOri, vec_t * RayDir, primitive_t * primitive, intersect_t * rtn) {
+int cast_ray_primitive(vec_t * RayOri, vec_t * RayDir, primitive_t * primitive, vec_t * vec_list, intersect_t * rtn) {
 	int A = 0;
 	switch (primitive->type) {
 		case TRIANGLE:
-			A = cast_ray_triangle(RayOri, RayDir, (triangle_t *)(&primitive->data.triangle), rtn);
+			A = cast_ray_triangle(RayOri, RayDir, (triangle_t *)(&primitive->data.triangle), vec_list, rtn);
 			if (A != 0) {
 				rtn->primitive = primitive;
 			}
 			return A;
 
-		case SPHERE:
-			A = cast_ray_sphere(RayOri, RayDir, (sphere_t *)(&primitive->data.sphere), rtn);
+		case ELLIPSOID:
+			A = cast_ray_ellipsoid(RayOri, RayDir, (ellipsoid_t *)(&primitive->data.ellipsoid), vec_list, rtn);
 			if (A != 0) {
 				rtn->primitive = primitive;
 			}
 			return A;
 
 		case CUBOID:
-			A = cast_ray_cuboid(RayOri, RayDir, (cuboid_t *)(&primitive->data.cuboid), rtn);
+			A = cast_ray_cuboid(RayOri, RayDir, (cuboid_t *)(&primitive->data.cuboid), vec_list, rtn);
 			if (A != 0) {
 				rtn->primitive = primitive;
 			}
@@ -165,7 +163,7 @@ int cast_ray_primitive(vec_t * RayOri, vec_t * RayDir, primitive_t * primitive, 
 	}
 }
 
-int cast_ray_bvh(vec_t * RayOri, vec_t * RayDir, bvh_t * bvh, intersect_t * rtn) {
+int cast_ray_bvh(vec_t * RayOri, vec_t * RayDir, bvh_t * bvh, vec_t * vec_list, intersect_t * rtn) {
 	
 	if (bvh == NULL) return 0;
 	
@@ -219,7 +217,7 @@ int cast_ray_bvh(vec_t * RayOri, vec_t * RayDir, bvh_t * bvh, intersect_t * rtn)
 			(((RayDir->y > 0.0f) ^ (ty3 > tmp_min))<<1) | 
 			(((RayDir->x > 0.0f) ^ (tx3 > tmp_min)));
 		
-		int A = cast_ray_bvh(RayOri, RayDir, bvh->children[index], rtn);
+		int A = cast_ray_bvh(RayOri, RayDir, bvh->children[index], vec_list, rtn);
 		if (A) return A;
 		
 		float P[] = {
@@ -244,7 +242,7 @@ int cast_ray_bvh(vec_t * RayOri, vec_t * RayDir, bvh_t * bvh, intersect_t * rtn)
 		while(search[order] != 255) {
 			if (P[search[order]] <= 0) return 0;
 			index ^= 1 << search[order];
-			A = cast_ray_bvh(RayOri, RayDir, bvh->children[index], rtn);
+			A = cast_ray_bvh(RayOri, RayDir, bvh->children[index], vec_list, rtn);
 			if (A) return A;
 			order++;
 		}
@@ -255,7 +253,7 @@ int cast_ray_bvh(vec_t * RayOri, vec_t * RayDir, bvh_t * bvh, intersect_t * rtn)
 		// Calls to check triangle contents
 		int A = 0;
 		for(int i = 0; i < bvh->primitive_count; i++) {
-			int B = cast_ray_primitive(RayOri, RayDir, bvh->primitive_list + i, rtn);
+			int B = cast_ray_primitive(RayOri, RayDir, bvh->primitive_list + i, vec_list, rtn);
 			if (B) A = B;
 		}
 		return A;
@@ -266,13 +264,13 @@ int cast_ray_bvh(vec_t * RayOri, vec_t * RayDir, bvh_t * bvh, intersect_t * rtn)
 
 
 // TODO: Replace primative list with a BVH
-void trace_ray(vec_t * RayOri, vec_t * RayRayDir, bvh_t * bvh, color_t * rtn) {
+void trace_ray(vec_t * RayOri, vec_t * RayRayDir, bvh_t * bvh, vec_t * vec_list, color_t * rtn) {
 	
 	
 	intersect_t I;
 	I.dist = INFINITY;
 	
-	cast_ray_bvh(RayOri, RayRayDir, bvh, &I);
+	cast_ray_bvh(RayOri, RayRayDir, bvh, vec_list, &I);
 	
 	
 	if (I.dist < INFINITY) {
@@ -309,7 +307,10 @@ unsigned int color_to_int(color_t color) {
 	
 }
 
-void render_image(camera_t * Camera, bvh_t * bvh, unsigned int * PixelBuffer) {
+void render_image(camera_t * Camera, model_t * render_target, unsigned int * PixelBuffer) {
+	
+	bvh_t * bvh = build_bvh(render_target, 16, 8);
+	
 	
 	#pragma omp parallel for
 	for(int i = 0; i < Camera->vRES * Camera->hRES; i++) {
@@ -327,9 +328,12 @@ void render_image(camera_t * Camera, bvh_t * bvh, unsigned int * PixelBuffer) {
 		vec_t RayDir = vec_rotate(Camera->look, axis, sqrt(Yaw*Yaw + Pitch*Pitch));
 
 		color_t color = (color_t){0.0, 0.0, 0.0, 0.0};
-		trace_ray(&Camera->pos, &RayDir, bvh, &color);
+		trace_ray(&Camera->pos, &RayDir, bvh, render_target->vec_list, &color);
 
 		PixelBuffer[x + y * Camera->hRES] = color_to_int(color);
 
 	}
+	
+	destroy_bvh(bvh);
+	
 }

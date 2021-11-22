@@ -65,9 +65,11 @@ model_t * load_model(const char * fname) {
 	
 	int vec_count = attrib.vertices.size() / 3;
 	vec_t * vec_list = (vec_t *) malloc(sizeof(vec_t) * vec_count);
-	for(int i = 0; i < vec_count; i++) {
-		vec_list[i] = (vec_t){attrib.vertices[i*3 + 0], attrib.vertices[i*3 + 1], attrib.vertices[i*3 + 2]};
-	}
+	memcpy(vec_list, attrib.vertices.data(), sizeof(vec_t) * vec_count);
+	
+//	for(int i = 0; i < vec_count; i++) {
+//		vec_list[i] = (vec_t){attrib.vertices[i*3 + 0], attrib.vertices[i*3 + 1], attrib.vertices[i*3 + 2]};
+//	}
 	
 	
 	int primitive_count = 0;
@@ -84,7 +86,7 @@ model_t * load_model(const char * fname) {
 			tinyobj::index_t iC = shapes[i].mesh.indices[j+2];
 			
 			primitive_list[primitive_index].type = TRIANGLE;
-			primitive_list[primitive_index].data.triangle = (triangle_t){vec_list + iA.vertex_index, vec_list + iB.vertex_index, vec_list + iC.vertex_index};
+			primitive_list[primitive_index].data.triangle = (triangle_t){iA.vertex_index, iB.vertex_index, iC.vertex_index};
 			
 			primitive_index++;
 		}
@@ -107,6 +109,7 @@ model_t * aggregate_models(model_t ** model_list, int model_count) {
 	
 	int vec_total = 0;
 	int primitive_total = 0;
+	
 	for(int i = 0; i < model_count; i++) {
 		vec_total += model_list[i]->vec_count;
 		primitive_total += model_list[i]->primitive_count;
@@ -120,12 +123,41 @@ model_t * aggregate_models(model_t ** model_list, int model_count) {
 	
 	int vec_offset = 0;
 	int primitive_offset = 0;
+	
 	for(int i = 0; i < model_count; i++) {
+		
 		memcpy(rtn->vec_list + vec_offset, model_list[i]->vec_list, sizeof(vec_t) * model_list[i]->vec_count);
-		vec_offset += model_list[i]->vec_count;
 		
 		memcpy(rtn->primitive_list + primitive_offset, model_list[i]->primitive_list, sizeof(primitive_t) * model_list[i]->primitive_count);
+		
+		for(int j = primitive_offset; j < primitive_offset + model_list[i]->primitive_count; j++) {
+			
+			switch (rtn->primitive_list[j].type) {
+				case TRIANGLE:
+					rtn->primitive_list[j].data.triangle.A += vec_offset;
+					rtn->primitive_list[j].data.triangle.B += vec_offset;
+					rtn->primitive_list[j].data.triangle.C += vec_offset;
+					break;
+					
+				case ELLIPSOID:
+					rtn->primitive_list[j].data.ellipsoid.origin += vec_offset;
+					rtn->primitive_list[j].data.ellipsoid.radius += vec_offset;
+					break;
+					
+				case CUBOID:
+					rtn->primitive_list[j].data.cuboid.min += vec_offset;
+					rtn->primitive_list[j].data.cuboid.max += vec_offset;
+					break;
+					
+				default:
+					break;
+			}
+			
+		}
+		
+		vec_offset += model_list[i]->vec_count;
 		primitive_offset += model_list[i]->primitive_count;
+		
 	}
 	
 	return rtn;
@@ -133,7 +165,9 @@ model_t * aggregate_models(model_t ** model_list, int model_count) {
 }
 
 model_t * copy_model(model_t * target) {
+	
 	model_t * rtn = (model_t *) malloc(sizeof(model_t));
+	
 	rtn->vec_count = target->vec_count;
 	rtn->vec_list = (vec_t *) malloc(sizeof(vec_t) * rtn->vec_count);
 	memcpy(rtn->vec_list, target->vec_list, sizeof(vec_t) * rtn->vec_count);
@@ -141,39 +175,6 @@ model_t * copy_model(model_t * target) {
 	rtn->primitive_count = target->primitive_count;
 	rtn->primitive_list = (primitive_t *) malloc(sizeof(primitive_t) * rtn->primitive_count);
 	memcpy(rtn->primitive_list, target->primitive_list, sizeof(primitive_t) * rtn->primitive_count);
-	
-	
-	for(int i = 0; i < rtn->primitive_count; i++) {
-		
-		switch (rtn->primitive_list[i].type) {
-			case TRIANGLE:
-				
-				rtn->primitive_list[i].data.triangle.A = rtn->vec_list + (rtn->primitive_list[i].data.triangle.A - target->vec_list);
-				rtn->primitive_list[i].data.triangle.B = rtn->vec_list + (rtn->primitive_list[i].data.triangle.B - target->vec_list);
-				rtn->primitive_list[i].data.triangle.C = rtn->vec_list + (rtn->primitive_list[i].data.triangle.C - target->vec_list);
-				
-				break;
-				
-			case SPHERE:
-				
-				rtn->primitive_list[i].data.sphere.ori = rtn->vec_list + (rtn->primitive_list[i].data.sphere.ori - target->vec_list);
-				
-				break;
-				
-			case CUBOID:
-				
-				rtn->primitive_list[i].data.cuboid.min = rtn->vec_list + (rtn->primitive_list[i].data.cuboid.min - target->vec_list);
-				rtn->primitive_list[i].data.cuboid.max = rtn->vec_list + (rtn->primitive_list[i].data.cuboid.max - target->vec_list);
-				
-				break;
-				
-			default:
-				break;
-		}
-		
-	}
-	
-	
 	
 	return rtn;
 }
@@ -204,11 +205,11 @@ void destroy_model(model_t * model) {
 
 
 
-void get_bounds_triangle(triangle_t * triangle, vec_t * p_min, vec_t * p_mid, vec_t * p_max) {
+void get_bounds_triangle(triangle_t * triangle, vec_t * vec_list, vec_t * p_min, vec_t * p_mid, vec_t * p_max) {
 	
-	vec_t *A = triangle->A;
-	vec_t *B = triangle->B;
-	vec_t *C = triangle->C;
+	vec_t *A = vec_list + triangle->A;
+	vec_t *B = vec_list + triangle->B;
+	vec_t *C = vec_list + triangle->C;
 	
 	if (A->x < B->x && A->x < C->x) {
 		p_min->x = A->x;
@@ -268,31 +269,37 @@ void get_bounds_triangle(triangle_t * triangle, vec_t * p_min, vec_t * p_mid, ve
 	
 }
 
-void get_bounds_sphere(sphere_t * sphere, vec_t * p_min, vec_t * p_mid, vec_t * p_max) {
-	*p_min = (vec_t){sphere->ori->x - *sphere->radius, sphere->ori->y - *sphere->radius, sphere->ori->z - *sphere->radius};
-	*p_mid = *sphere->ori;
-	*p_max = (vec_t){sphere->ori->x + *sphere->radius, sphere->ori->y + *sphere->radius, sphere->ori->z + *sphere->radius};
+void get_bounds_ellipsoid(ellipsoid_t * ellipsoid, vec_t * vec_list, vec_t * p_min, vec_t * p_mid, vec_t * p_max) {
+	
+	vec_t * origin = vec_list + ellipsoid->origin;
+	vec_t * radius = vec_list + ellipsoid->radius;
+	
+	*p_min = (vec_t){origin->x - radius->x, origin->y - radius->y, origin->z - radius->z};
+	*p_mid = *origin;
+	*p_max = (vec_t){origin->x + radius->x, origin->y + radius->y, origin->z + radius->z};
 }
 
-void get_bounds_cuboid(cuboid_t * cuboid, vec_t * p_min, vec_t * p_mid, vec_t * p_max) {
-	*p_min = *cuboid->min;
-	*p_mid = (vec_t){(cuboid->min->x + cuboid->max->x) * 0.5f, (cuboid->min->y + cuboid->max->y) * 0.5f, (cuboid->min->z + cuboid->max->z) * 0.5f};
-	*p_max = *cuboid->max;
+void get_bounds_cuboid(cuboid_t * cuboid, vec_t * vec_list, vec_t * p_min, vec_t * p_mid, vec_t * p_max) {
+	*p_min = *(vec_list + cuboid->min);
+	*p_max = *(vec_list + cuboid->max);
+	
+	*p_mid = (vec_t){(p_min->x + p_max->x) * 0.5f, (p_min->y + p_max->y) * 0.5f, (p_min->z + p_max->z) * 0.5f};
+	
 }
 
-void get_bounds_primitive(primitive_t * primitive, vec_t * p_min, vec_t * p_mid, vec_t * p_max) {
+void get_bounds_primitive(primitive_t * primitive, vec_t * vec_list, vec_t * p_min, vec_t * p_mid, vec_t * p_max) {
 	
 	switch (primitive->type) {
 		case TRIANGLE:
-			get_bounds_triangle(&primitive->data.triangle, p_min, p_mid, p_max);
+			get_bounds_triangle(&primitive->data.triangle, vec_list, p_min, p_mid, p_max);
 			break;
 			
-		case SPHERE:
-			get_bounds_sphere(&primitive->data.sphere, p_min, p_mid, p_max);
+		case ELLIPSOID:
+			get_bounds_ellipsoid(&primitive->data.ellipsoid, vec_list,  p_min, p_mid, p_max);
 			break;
 			
 		case CUBOID:
-			get_bounds_cuboid(&primitive->data.cuboid, p_min, p_mid, p_max);
+			get_bounds_cuboid(&primitive->data.cuboid, vec_list,  p_min, p_mid, p_max);
 			break;
 			
 		default:
@@ -312,7 +319,7 @@ unsigned long hash_vec(vec_t * vec) {
 	return (((unsigned long)floor(vec->x * 607.0)) & 0x3FF) | ((((unsigned long)floor(vec->y * 47.0)) & 0x3FF) << 10) | ((((unsigned long)floor(vec->z * 809.0)) & 0x3FF) << 20);
 }
 
-bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * smin, vec_t * smax, int limit, int depth) {
+bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * vec_list, vec_t * smin, vec_t * smax, int limit, int depth) {
 	
 	if (depth < 0) return NULL;
 	if (primitive_count <= 0) return NULL;
@@ -336,7 +343,7 @@ bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * sm
 	for(int i = 0; i < primitive_count; i++) {
 		
 		vec_t p_min, p_mid, p_max;
-		get_bounds_primitive(primitive_list + i, &p_min, &p_mid, &p_max);
+		get_bounds_primitive(primitive_list + i, vec_list, &p_min, &p_mid, &p_max);
 		
 		
 		unsigned long h = hash_vec(&p_mid);
@@ -394,7 +401,7 @@ bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * sm
 			for(int j = 0; j < primitive_count; j++) {
 				
 				vec_t p_min, p_mid, p_max;
-				get_bounds_primitive(primitive_list + j, &p_min, &p_mid, &p_max);
+				get_bounds_primitive(primitive_list + j, vec_list, &p_min, &p_mid, &p_max);
 				
 				if (overlap_bounds(&tmp_min, &tmp_max, &p_min, &p_max)) {
 					temp_primitive_list[j] = primitive_list[j];
@@ -412,7 +419,7 @@ bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * sm
 				}
 			}
 			
-			rtn->children[i] = create_bvh(count, temp_primitive_list, &tmp_min, &tmp_max, limit, depth-1);
+			rtn->children[i] = create_bvh(count, temp_primitive_list, vec_list, &tmp_min, &tmp_max, limit, depth-1);
 			free(temp_primitive_list);
 			
 		}
@@ -449,7 +456,7 @@ bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * sm
 }
 
 bvh_t * build_bvh(model_t * model, int limit, int depth) {
-	return create_bvh(model->primitive_count, model->primitive_list, NULL, NULL, limit, depth);
+	return create_bvh(model->primitive_count, model->primitive_list, model->vec_list, NULL, NULL, limit, depth);
 }
 
 void destroy_bvh(bvh_t * bvh) {
