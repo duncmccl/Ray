@@ -93,9 +93,25 @@ int main() {
 	model_t * bunny = load_model("bunny.obj");
 	printf("Bunny Model: %d, %d\n", bunny->vec_count, bunny->primitive_count);
 	
-	vec_t bunny_look = (vec_t){1.0f, 0.0f, 0.0f};
-	vec_t bunny_up = (vec_t){0.0f, 1.0f, 0.0f};
-	vec_t bunny_right = (vec_t){0.0f, 0.0f, 1.0f};
+	float yaw = 0.0f;
+	float pitch = 0.0f;
+	float roll = 0.0f;
+	
+	vec_t bunny_look = (vec_t){
+		(float)(cos(yaw)*cos(pitch)),
+		(float)(sin(yaw)*cos(pitch)),
+		(float)(-sin(pitch))
+		};
+	vec_t bunny_up = (vec_t){
+		(float)(cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll)),
+		(float)(sin(yaw)*sin(pitch)*cos(roll) + cos(yaw)*cos(roll)),
+		(float)(cos(pitch)*sin(roll))
+		};
+	vec_t bunny_right = (vec_t){
+		(float)(cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(roll)),
+		(float)(sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll)),
+		(float)(cos(pitch)*cos(roll))
+		};
 	vec_t bunny_pos = (vec_t){0.0f, 0.0f, 0.0f};
 
 	
@@ -107,7 +123,7 @@ int main() {
 	
 	char loop = 1;
 	int frame_count = 0;
-	int frame_limit = 10;
+	int frame_limit = 60;
 	
 	char title[64];
 	
@@ -139,10 +155,29 @@ int main() {
 		
 		
 		
+		yaw += 0.0f;	// Z Axis
+		pitch += M_PI / 32.0f;			// Y axis
+		roll += 0.0f;			// X axis
+
+		bunny_look = (vec_t){
+			(float)(cos(yaw)*cos(pitch)),
+			(float)(sin(yaw)*cos(pitch)),
+			(float)(-sin(pitch))
+			};
+		bunny_up = (vec_t){
+			(float)(cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll)),
+			(float)(sin(yaw)*sin(pitch)*cos(roll) + cos(yaw)*cos(roll)),
+			(float)(cos(pitch)*sin(roll))
+			};
+		bunny_right = (vec_t){
+			(float)(cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(roll)),
+			(float)(sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll)),
+			(float)(cos(pitch)*cos(roll))
+			};
 		
-		
-		bunny_pos.z += 0.01;
-		bunny_pos.y -= 0.01;
+		bunny_pos.x += 0.00f;
+		bunny_pos.z += 0.01f;
+		bunny_pos.y -= 0.01f;
 		
 		
 		model_t * moving_bunny = copy_model(bunny);
