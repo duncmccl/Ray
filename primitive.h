@@ -2,8 +2,6 @@
 #ifndef __primitive_H
 #define __primitive_H
 
-#include <math.h>
-
 
 typedef struct {
 	float a, r, g, b;

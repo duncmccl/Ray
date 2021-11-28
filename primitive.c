@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <float.h>
+#include <math.h>
 
 #include "primitive.h"
-#include "btree.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
@@ -130,6 +130,7 @@ model_t * aggregate_models(model_t ** model_list, int model_count) {
 		
 		memcpy(rtn->primitive_list + primitive_offset, model_list[i]->primitive_list, sizeof(primitive_t) * model_list[i]->primitive_count);
 		
+		#pragma omp parallel for
 		for(int j = primitive_offset; j < primitive_offset + model_list[i]->primitive_count; j++) {
 			
 			switch (rtn->primitive_list[j].type) {
@@ -181,6 +182,7 @@ model_t * copy_model(model_t * target) {
 
 void trans_rotate_model(model_t * target, vec_t * look, vec_t * up, vec_t * right, vec_t * pos) {
 	
+	#pragma omp parallel for
 	for(int i = 0; i < target->vec_count; i++) {
 		
 		vec_t * old = target->vec_list +i;
@@ -211,58 +213,17 @@ void get_bounds_triangle(triangle_t * triangle, vec_t * vec_list, vec_t * p_min,
 	vec_t *B = vec_list + triangle->B;
 	vec_t *C = vec_list + triangle->C;
 	
-	if (A->x < B->x && A->x < C->x) {
-		p_min->x = A->x;
-	} else if (B->x < C->x) {
-		p_min->x = B->x;
-	} else {
-		p_min->x = C->x;
-	}
+	// Determine min value of A, B, C
+	p_min->x = fminf(A->x, fminf(B->x, C->x));
+	p_min->y = fminf(A->y, fminf(B->y, C->y));
+	p_min->z = fminf(A->z, fminf(B->z, C->z));
 	
-	if (A->y < B->y && A->y < C->y) {
-		p_min->y = A->y;
-	} else if (B->y < C->y) {
-		p_min->y = B->y;
-	} else {
-		p_min->y = C->y;
-	}
+	// Determine max value of A, B, C
+	p_max->x = fmaxf(A->x, fmaxf(B->x, C->x));
+	p_max->y = fmaxf(A->y, fmaxf(B->y, C->y));
+	p_max->z = fmaxf(A->z, fmaxf(B->z, C->z));
 	
-	if (A->z < B->z && A->z < C->z) {
-		p_min->z = A->z;
-	} else if (B->z < C->z) {
-		p_min->z = B->z;
-	} else {
-		p_min->z = C->z;
-	}
-	
-	
-	
-	if (A->x > B->x && A->x > C->x) {
-		p_max->x = A->x;
-	} else if (B->x > C->x) {
-		p_max->x = B->x;
-	} else {
-		p_max->x = C->x;
-	}
-	
-	if (A->y > B->y && A->y > C->y) {
-		p_max->y = A->y;
-	} else if (B->y > C->y) {
-		p_max->y = B->y;
-	} else {
-		p_max->y = C->y;
-	}
-	
-	if (A->z > B->z && A->z > C->z) {
-		p_max->z = A->z;
-	} else if (B->z > C->z) {
-		p_max->z = B->z;
-	} else {
-		p_max->z = C->z;
-	}
-	
-	
-	
+	// Determine mid value of A, B, C
 	p_mid->x = (A->x + B->x + C->x) / 3.0f;
 	p_mid->y = (A->y + B->y + C->y) / 3.0f;
 	p_mid->z = (A->z + B->z + C->z) / 3.0f;
@@ -274,16 +235,16 @@ void get_bounds_ellipsoid(ellipsoid_t * ellipsoid, vec_t * vec_list, vec_t * p_m
 	vec_t * origin = vec_list + ellipsoid->origin;
 	vec_t * radius = vec_list + ellipsoid->radius;
 	
-	*p_min = (vec_t){origin->x - radius->x, origin->y - radius->y, origin->z - radius->z};
+	*p_min = vec_sub(*origin, *radius);
 	*p_mid = *origin;
-	*p_max = (vec_t){origin->x + radius->x, origin->y + radius->y, origin->z + radius->z};
+	*p_max = vec_add(*origin, *radius);
 }
 
 void get_bounds_cuboid(cuboid_t * cuboid, vec_t * vec_list, vec_t * p_min, vec_t * p_mid, vec_t * p_max) {
 	*p_min = *(vec_list + cuboid->min);
 	*p_max = *(vec_list + cuboid->max);
 	
-	*p_mid = (vec_t){(p_min->x + p_max->x) * 0.5f, (p_min->y + p_max->y) * 0.5f, (p_min->z + p_max->z) * 0.5f};
+	*p_mid = vec_scale(vec_add(*p_min, *p_max), 0.5f);
 	
 }
 
@@ -315,17 +276,19 @@ int overlap_bounds(vec_t * A_min, vec_t * A_max, vec_t * B_min, vec_t * B_max) {
 	
 }
 
-unsigned long hash_vec(vec_t * vec) {
-	return (((unsigned long)floor(vec->x * 607.0)) & 0x3FF) | ((((unsigned long)floor(vec->y * 47.0)) & 0x3FF) << 10) | ((((unsigned long)floor(vec->z * 809.0)) & 0x3FF) << 20);
-}
-
 bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * vec_list, vec_t * smin, vec_t * smax, int limit, int depth) {
 	
+	// Recursive end cases:
+	// If depth is zero, or there are no primitives, return NULL.
 	if (depth < 0) return NULL;
 	if (primitive_count <= 0) return NULL;
 	
+	// Create the bvh that will be returned.
 	bvh_t * rtn = (bvh_t *) malloc(sizeof(bvh_t));
 	
+	// If either smin, or smax are null
+	// than new min and max must be determined
+	// Otherwise, rtn's min and max will be smin and smax.
 	unsigned char bSetMinMax = (smin == NULL || smax == NULL);
 	
 	if(bSetMinMax) {
@@ -336,26 +299,25 @@ bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * ve
 		rtn->max = *smax;
 	}
 	
+	// rtn's middle point will be determined by the average
+	// of all the given primitive's middle points.
 	rtn->mid = (vec_t){0.0, 0.0, 0.0};
 	int vec_count = 0;
-	btree_t * vec_tree = NULL;
 	
 	for(int i = 0; i < primitive_count; i++) {
 		
+		// get_bounds_primitive will populate p_min, p_mid, and p_max
+		// with the bounds from the given primitive.
 		vec_t p_min, p_mid, p_max;
 		get_bounds_primitive(primitive_list + i, vec_list, &p_min, &p_mid, &p_max);
 		
+		// Accumulate middles
+		rtn->mid.x += p_mid.x;
+		rtn->mid.y += p_mid.y;
+		rtn->mid.z += p_mid.z;
+		vec_count++;
 		
-		unsigned long h = hash_vec(&p_mid);
-		if (!contains_btree(vec_tree, h)) {
-			insert_btree(&vec_tree, h);
-
-			rtn->mid.x += p_mid.x;
-			rtn->mid.y += p_mid.y;
-			rtn->mid.z += p_mid.z;
-			vec_count++;
-		}
-		
+		// If bounds must be determined, check for new min and max.
 		if (bSetMinMax) {
 			if(rtn->min.x > p_min.x) rtn->min.x = p_min.x;
 			if(rtn->min.y > p_min.y) rtn->min.y = p_min.y;
@@ -365,18 +327,18 @@ bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * ve
 			if(rtn->max.y < p_max.y) rtn->max.y = p_max.y;
 			if(rtn->max.z < p_max.z) rtn->max.z = p_max.z;
 		}
-		
-		
 	}
 	
-	free_btree(vec_tree);
-	
+	// Average accumulated values,
+	// with quick check for divide by zero
 	if (vec_count != 0) {
 		rtn->mid.x /= (float)vec_count;
 		rtn->mid.y /= (float)vec_count;
 		rtn->mid.z /= (float)vec_count;
 	}
 	
+	// If middle is outside of the min and max bounds,
+	// reset middle to be geometric middle of the bounds.
 	if((rtn->mid.x < rtn->min.x) || (rtn->mid.x > rtn->max.x) || (rtn->mid.y < rtn->min.y) || (rtn->mid.y > rtn->max.y) || (rtn->mid.z < rtn->min.z) || (rtn->mid.z > rtn->max.z)) {
 		
 		rtn->mid.x = (rtn->min.x + rtn->max.x) * 0.5f;
@@ -385,10 +347,13 @@ bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * ve
 		
 	}
 	
+	// IF: more children are to be made:
 	if (primitive_count > limit && depth > 0) {
 		
+		// Itterate through each quadrant of the BVH
 		for(int i = 0; i < 8; i++) {
 			
+			// Select the min and max for the quadrant.
 			vec_t tmp_min = (vec_t){(i & 0x1) ? rtn->mid.x : rtn->min.x, 
 									 (i & 0x2) ? rtn->mid.y : rtn->min.y, 
 									 (i & 0x4) ? rtn->mid.z : rtn->min.z};
@@ -396,11 +361,16 @@ bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * ve
 									 (i & 0x2) ? rtn->max.y : rtn->mid.y, 
 									 (i & 0x4) ? rtn->max.z : rtn->mid.z};
 			
+			// Make a temporary list to store the primitives that are in the quadrant
 			primitive_t * temp_primitive_list = (primitive_t *) malloc(sizeof(primitive_t) * primitive_count);
 			
+			// For each primitive, check if it is in the quadrant
+			#pragma omp parallel for
 			for(int j = 0; j < primitive_count; j++) {
 				
-				vec_t p_min, p_mid, p_max;
+				vec_t p_min = (vec_t){0.0f, 0.0f, 0.0f};
+				vec_t p_mid = (vec_t){0.0f, 0.0f, 0.0f};
+				vec_t p_max = (vec_t){0.0f, 0.0f, 0.0f};
 				get_bounds_primitive(primitive_list + j, vec_list, &p_min, &p_mid, &p_max);
 				
 				if (overlap_bounds(&tmp_min, &tmp_max, &p_min, &p_max)) {
@@ -411,6 +381,7 @@ bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * ve
 				
 			}
 			
+			// reduce the list, removing the invalid values
 			int count = 0;
 			for(int j = 0; j < primitive_count; j++) {
 				if (temp_primitive_list[j].type != INVALID) {
@@ -419,29 +390,36 @@ bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * ve
 				}
 			}
 			
+			// Recursive call to create child bvh
 			rtn->children[i] = create_bvh(count, temp_primitive_list, vec_list, &tmp_min, &tmp_max, limit, depth-1);
-			free(temp_primitive_list);
 			
+			// Cleanup temp list
+			free(temp_primitive_list);
+		
 		}
 		
-		
+		// Check number of children
 		int children_count = 0;
 		for(int i = 0; i < 8; i++) {
 			if (rtn->children[i] != NULL) children_count++;
 		}
+		
 		if (children_count != 0) {
 			
 			rtn->children_count = children_count;
 			rtn->primitive_list = NULL;
 			rtn->primitive_count = 0;
 			return rtn;
-			
+		
+		// If no children, return NULL.
 		} else {
 			
 			free(rtn);
 			return NULL;
 		}
 		
+		
+	// Else: No more children are to be made
 	} else {
 		
 		rtn->children_count = 0;
@@ -455,6 +433,7 @@ bvh_t * create_bvh(int primitive_count, primitive_t * primitive_list, vec_t * ve
 	}
 }
 
+// Wrapper function for creating BVH's from a model
 bvh_t * build_bvh(model_t * model, int limit, int depth) {
 	return create_bvh(model->primitive_count, model->primitive_list, model->vec_list, NULL, NULL, limit, depth);
 }
@@ -464,7 +443,7 @@ void destroy_bvh(bvh_t * bvh) {
 		if (bvh->children_count > 0) {
 			for(int i = 0; i < 8; i++) destroy_bvh(bvh->children[i]);
 		}
-		if (bvh->primitive_count > 0) free(bvh->primitive_list);
+		if (bvh->primitive_list) free(bvh->primitive_list);
 		free(bvh);
 	}
 }

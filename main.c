@@ -123,7 +123,7 @@ int main() {
 	
 	char loop = 1;
 	int frame_count = 0;
-	int frame_limit = 60;
+	int frame_limit = 30;
 	
 	char title[64];
 	

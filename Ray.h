@@ -4,6 +4,10 @@
 
 #include "primitive.h"
 
+
+
+// Intersection structure that describes an intersection
+// between a ray and a primitive.
 typedef struct {
 	
 	double dist;
@@ -18,12 +22,11 @@ typedef struct {
 	
 } intersect_t;
 
-int cast_ray_triangle(vec_t * RayOri, vec_t * RayDir, triangle_t * tri, intersect_t * rtn);
-int cast_ray_ellipsoid(vec_t * RayOri, vec_t * RayDir, ellipsoid_t * ellipsoid, intersect_t * rtn);
-int cast_ray_cuboid(vec_t * RayOri, vec_t * RayDir, cuboid_t * cuboid, intersect_t * rtn);
-int cast_ray_primitive(vec_t * RayOri, vec_t * RayDir, primitive_t * primitive, intersect_t * rtn);
-int cast_ray_bvh(vec_t * RayOri, vec_t * RayDir, bvh_t * bvh, intersect_t * rtn);
-
+int cast_ray_triangle(vec_t * ray_ori, vec_t * ray_dir, triangle_t * tri, intersect_t * rtn);
+int cast_ray_ellipsoid(vec_t * ray_ori, vec_t * ray_dir, ellipsoid_t * ellipsoid, intersect_t * rtn);
+int cast_ray_cuboid(vec_t * ray_ori, vec_t * ray_dir, cuboid_t * cuboid, intersect_t * rtn);
+int cast_ray_primitive(vec_t * ray_ori, vec_t * ray_dir, primitive_t * primitive, intersect_t * rtn);
+int cast_ray_bvh(vec_t * ray_ori, vec_t * ray_dir, bvh_t * bvh, intersect_t * rtn);
 
 
 void render_image(camera_t * Camera, model_t * render_target, unsigned int * PixelBuffer);

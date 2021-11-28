@@ -1,21 +1,25 @@
+#include <stdio.h>
+#include <math.h>
+
 #include "Ray.h"
 
-#include <stdio.h>
 
 
-int cast_ray_triangle(vec_t * RayOri, vec_t * RayDir, triangle_t * triangle, vec_t * vec_list, intersect_t * rtn) {
+int cast_ray_triangle(vec_t * ray_ori, vec_t * ray_dir, triangle_t * triangle, vec_t * vec_list, intersect_t * rtn) {
 	vec_t * A = vec_list + triangle->A;
 	vec_t * B = vec_list + triangle->B;
 	vec_t * C = vec_list + triangle->C;
 	
+	// Legs of the triangle
 	vec_t AB = vec_sub(*B, *A);
 	vec_t AC = vec_sub(*C, *A);
 	
+	// Normal of the triangle
 	vec_t norm = vec_cross(AB, AC);
+	float imag = 1.0f / sqrt(vec_dot(norm, norm));
+	norm = vec_scale(norm, imag);
 	
-	norm = vec_scale(norm, 1.0f / sqrt(vec_dot(norm, norm)));
-	
-	float i = vec_dot(*RayDir, norm);
+	float i = vec_dot(*ray_dir, norm);
 	
 	// No hit, Ray is parallel to triangle.
 	if (i == 0.0) return 0;
@@ -23,13 +27,15 @@ int cast_ray_triangle(vec_t * RayOri, vec_t * RayDir, triangle_t * triangle, vec
 	// Wrong side of the Triangle
 	//if (i > 0.0) return 0; 
 	
-	float t = vec_dot(vec_sub(*A, *RayOri), norm) / i;
+	// scalar for when ray intersects the plane that the triangle lies on.
+	float t = vec_dot(vec_sub(*A, *ray_ori), norm) / i;
 	
 	if (t < 0.0f || t > rtn->dist) {
 		return 0;
 	}
 	
-	vec_t X = vec_add(*RayOri, vec_scale(*RayDir, t));
+	// intersection point of Ray and plane of the triangle
+	vec_t X = vec_add(*ray_ori, vec_scale(*ray_dir, t));
 	vec_t dX = vec_sub(X, *A);
 	
 	float d00 = vec_dot(AB, AB);
@@ -38,11 +44,14 @@ int cast_ray_triangle(vec_t * RayOri, vec_t * RayDir, triangle_t * triangle, vec
 	float d11 = vec_dot(AC, AC);
 	float d12 = vec_dot(AC, dX);
 	
-	float invDenom = 1.0 / ((d01 * d01) - (d00 * d11));
+	float inv_denom = 1.0f / ((d01 * d01) - (d00 * d11));
 	
-	float u = ((d12 * d01) - (d02 * d11)) * invDenom;
-	float v = ((d02 * d01) - (d12 * d00)) * invDenom;
+	// Scalars:
+	// X = A + (AB * u) + (AC * v)
+	float u = ((d12 * d01) - (d02 * d11)) * inv_denom;
+	float v = ((d02 * d01) - (d12 * d00)) * inv_denom;
 	
+	// Intersection point is outside triangle if:
 	if (u < 0.0f || v < 0.0f || u + v > 1.0f) {
 		return 0;
 	}
@@ -62,7 +71,7 @@ int cast_ray_triangle(vec_t * RayOri, vec_t * RayDir, triangle_t * triangle, vec
 }
 
 
-int cast_ray_ellipsoid(vec_t * RayOri, vec_t * RayDir, ellipsoid_t * ellipsoid, vec_t * vec_list, intersect_t * rtn) {
+int cast_ray_ellipsoid(vec_t * ray_ori, vec_t * ray_dir, ellipsoid_t * ellipsoid, vec_t * vec_list, intersect_t * rtn) {
 	/*
 	
 	Ray: RayOrigin, RayRayDir->zection
@@ -77,6 +86,10 @@ int cast_ray_ellipsoid(vec_t * RayOri, vec_t * RayDir, ellipsoid_t * ellipsoid, 
 	
 	V0 = Ro - Eo
 	
+	Quadratic Equation from Mathematica solver
+	
+	t = (-B +- Sqrt(B^2 - 4 *A*C)) / 2*A
+	
 	A = (Rd / Er) . (Rd / Er)
 	B = 2.0f * (Rd / Er) . (V0 / Er)
 	C = (V0 / Er) . (V0 / Er) - 1
@@ -86,14 +99,12 @@ int cast_ray_ellipsoid(vec_t * RayOri, vec_t * RayDir, ellipsoid_t * ellipsoid, 
 	
 	
 	vec_t Er = *(vec_list + ellipsoid->radius);
-	vec_t Rd = *RayDir;
-	vec_t v0 = vec_sub(*RayOri, *(vec_list + ellipsoid->origin));
+	vec_t Rd = *ray_dir;
+	vec_t v0 = vec_sub(*ray_ori, *(vec_list + ellipsoid->origin));
 	
 	float C = (((v0.x * v0.x) / (Er.x * Er.x)) + ((v0.y * v0.y) / (Er.y * Er.y)) + ((v0.z * v0.z) / (Er.z * Er.z))) - 1.0f;
 	float B = 2.0f * (((Rd.x * v0.x) / (Er.x * Er.x)) + ((Rd.y * v0.y) / (Er.y * Er.y)) + ((Rd.z * v0.z) / (Er.z * Er.z)));
 	float A = (((Rd.x * Rd.x) / (Er.x * Er.x)) + ((Rd.y * Rd.y) / (Er.y * Er.y)) + ((Rd.z * Rd.z) / (Er.z * Er.z)));
-	
-	
 	
 	if ((B * B) > (4.0f * A * C)) {
 		
@@ -104,7 +115,7 @@ int cast_ray_ellipsoid(vec_t * RayOri, vec_t * RayDir, ellipsoid_t * ellipsoid, 
 		
 		if (rtn->dist > t) {
 			
-			vec_t X = vec_add(*RayOri, vec_scale(*RayDir, t));
+			vec_t X = vec_add(*ray_ori, vec_scale(*ray_dir, t));
 			vec_t norm = vec_sub(X, *(vec_list + ellipsoid->origin));
 			norm = vec_scale(norm, 1.0f / vec_dot(norm, norm));
 			

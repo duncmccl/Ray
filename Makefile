@@ -3,7 +3,7 @@ CFLAGS = -Wall
 
 all: main
 
-main: main.o Ray.o primitive.o bitmap.o btree.o
+main: main.o Ray.o primitive.o bitmap.o
 	$(CC) $(CFLAGS) -o $@ $^ -lm -fopenmp
 	
 main.o: main.c Ray.h primitive.h tiny_obj_loader.h
@@ -13,10 +13,7 @@ Ray.o: Ray.c Ray.h primitive.h
 	$(CC) $(CFLAGS) -c $< -lm -fopenmp
 
 primitive.o: primitive.c primitive.h
-	$(CC) $(CFLAGS) -c $< -lm
-
-btree.o: btree.c btree.h
-	$(CC) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c $< -lm -fopenmp
 
 bitmap.o: bitmap.c bitmap.h
 	$(CC) $(CFLAGS) -c $<
