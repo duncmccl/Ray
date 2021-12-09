@@ -11,6 +11,13 @@ typedef struct {
 	float x, y, z;
 } vec_t;
 
+typedef struct {
+	vec_t i;
+	vec_t j;
+	vec_t k;
+	vec_t l;
+} transform_t;
+
 float vec_dot(vec_t A, vec_t B);
 
 vec_t vec_cross(vec_t A, vec_t B);
@@ -68,12 +75,14 @@ typedef struct {
 	primitive_t * primitive_list;
 	int primitive_count;
 	
+	transform_t basis;
+	
 } model_t;
 
 model_t * load_model(const char * fname);
 model_t * aggregate_models(model_t ** model_list, int model_count);
 model_t * copy_model(model_t * target);
-void trans_rotate_model(model_t * target, vec_t * look, vec_t * up, vec_t * right, vec_t * pos);
+void transform_model(model_t * target);
 void destroy_model(model_t * model);
 
 
@@ -99,10 +108,7 @@ void destroy_bvh(bvh_t * bvh);
 
 
 typedef struct {
-	vec_t pos;
-	vec_t look;
-	vec_t up;
-	vec_t right;
+	transform_t basis;
 	
 	int hRES;
 	int vRES;

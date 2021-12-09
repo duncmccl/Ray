@@ -27,10 +27,10 @@ int main() {
 	// Init
 	
 	camera_t Camera;
-	Camera.pos =	(vec_t){-5.0f, 0.0f, 0.0f};
-	Camera.look =	(vec_t){1.0f, 0.0f, 0.0f};
-	Camera.up =		(vec_t){0.0f, 1.0f, 0.0f};
-	Camera.right =	(vec_t){0.0f, 0.0f, 1.0f};
+	Camera.basis.i = (vec_t){1.0f, 0.0f, 0.0f};
+	Camera.basis.j = (vec_t){0.0f, 1.0f, 0.0f};
+	Camera.basis.k = (vec_t){0.0f, 0.0f, 1.0f};
+	Camera.basis.l = (vec_t){-5.0f, 0.0f, 0.0f};
 	
 	Camera.hRES = 1920;
 	Camera.vRES = 1080;
@@ -87,35 +87,30 @@ int main() {
 	
 	
 	
-	model_t phys_model = (model_t){phys_vec_list, phys_vec_count, phys_primitive_list, phys_primitive_count};
+	model_t phys_model;
+	phys_model.vec_list = phys_vec_list;
+	phys_model.vec_count = phys_vec_count;
+	phys_model.primitive_list = phys_primitive_list;
+	phys_model.primitive_count = phys_primitive_count;
+	
+	phys_model.basis.i = (vec_t){1.0f, 0.0f, 0.0f};
+	phys_model.basis.j = (vec_t){0.0f, 1.0f, 0.0f};
+	phys_model.basis.k = (vec_t){0.0f, 0.0f, 1.0f};
+	phys_model.basis.l = (vec_t){0.0f, 0.0f, 0.0f};
+	
 	printf("Phys Model: %d, %d\n", phys_model.vec_count, phys_model.primitive_count);
 	
 	model_t * bunny = load_model("bunny.obj");
 	printf("Bunny Model: %d, %d\n", bunny->vec_count, bunny->primitive_count);
 	
-	float yaw = 0.0f;
-	float pitch = 0.0f;
-	float roll = 0.0f;
+	bunny->basis.i = (vec_t){1.0f, 0.0f, 0.0f};
+	bunny->basis.j = (vec_t){0.0f, 1.0f, 0.0f};
+	bunny->basis.k = (vec_t){0.0f, 0.0f, 1.0f};
+	bunny->basis.l = (vec_t){0.0f, 0.0f, 0.0f};
 	
-	vec_t bunny_look = (vec_t){
-		(float)(cos(yaw)*cos(pitch)),
-		(float)(sin(yaw)*cos(pitch)),
-		(float)(-sin(pitch))
-		};
-	vec_t bunny_up = (vec_t){
-		(float)(cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll)),
-		(float)(sin(yaw)*sin(pitch)*cos(roll) + cos(yaw)*cos(roll)),
-		(float)(cos(pitch)*sin(roll))
-		};
-	vec_t bunny_right = (vec_t){
-		(float)(cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(roll)),
-		(float)(sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll)),
-		(float)(cos(pitch)*cos(roll))
-		};
-	vec_t bunny_pos = (vec_t){0.0f, 0.0f, 0.0f};
-
-	
-	
+	float yaw = 0;
+	float pitch = 0;
+	float roll = 0;
 	
 	
 	
@@ -153,48 +148,23 @@ int main() {
 		phys_vec_list[3] = (vec_t){-0.25f, 1.0f * sin(gamma), 0.0f};
 		
 		
+		bunny->basis.i = (vec_t){(cos(pitch)*cos(yaw)), ((cos(pitch)*sin(yaw)*sin(roll)) - (sin(pitch)*cos(roll))), ((cos(pitch)*sin(yaw)*cos(roll)) + (sin(pitch)*sin(roll)))};
+		bunny->basis.j = (vec_t){(sin(pitch)*cos(yaw)), ((sin(pitch)*sin(yaw)*sin(roll)) + (cos(pitch)*cos(roll))), ((sin(pitch)*sin(yaw)*cos(roll)) - (cos(pitch)*sin(roll)))};
+		bunny->basis.k = (vec_t){(-sin(yaw)), (cos(yaw)*sin(roll)), (cos(yaw)*cos(roll))};
 		
+		bunny->basis.l.x += 0.1f;
+		bunny->basis.l.y += 0.2f;
+		bunny->basis.l.z += 0.4f;
 		
-		yaw += 0.0f;	// Z Axis
-		pitch += M_PI / 32.0f;			// Y axis
-		roll += 0.0f;			// X axis
-
-		bunny_look = (vec_t){
-			(float)(cos(yaw)*cos(pitch)),
-			(float)(sin(yaw)*cos(pitch)),
-			(float)(-sin(pitch))
-			};
-		bunny_up = (vec_t){
-			(float)(cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll)),
-			(float)(sin(yaw)*sin(pitch)*cos(roll) + cos(yaw)*cos(roll)),
-			(float)(cos(pitch)*sin(roll))
-			};
-		bunny_right = (vec_t){
-			(float)(cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(roll)),
-			(float)(sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll)),
-			(float)(cos(pitch)*cos(roll))
-			};
-		
-		bunny_pos.x += 0.00f;
-		bunny_pos.z += 0.01f;
-		bunny_pos.y -= 0.01f;
-		
-		
-		model_t * moving_bunny = copy_model(bunny);
-		trans_rotate_model(moving_bunny, &bunny_look, &bunny_up, &bunny_right, &bunny_pos);
 		
 		
 		// Render
 		
 		int model_count = 2;
-		model_t * model_list[2] = {&phys_model, moving_bunny};
+		model_t * model_list[2] = {&phys_model, bunny};
 		
-		model_t * render_target = aggregate_models(model_list, model_count);
 		
-		render_image(&Camera, render_target, PixelBuffer);
-		
-		destroy_model(render_target);
-		destroy_model(moving_bunny);
+		render_image(&Camera, model_list, model_count, PixelBuffer);
 		
 		sprintf(title, "./Output/Frame_%d.bmp", frame_count);
 		save_bmp((unsigned char *)PixelBuffer, Camera.hRES, Camera.vRES, title);
@@ -202,6 +172,10 @@ int main() {
 		
 		frame_count++;
 		if (frame_count >= frame_limit) loop = 0;
+		
+		yaw += 0.01f;
+		pitch -= 0.2f;
+		roll += 0.05f;
 	}
 	
 	

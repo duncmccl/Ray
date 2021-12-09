@@ -29,6 +29,6 @@ int cast_ray_primitive(vec_t * ray_ori, vec_t * ray_dir, primitive_t * primitive
 int cast_ray_bvh(vec_t * ray_ori, vec_t * ray_dir, bvh_t * bvh, intersect_t * rtn);
 
 
-void render_image(camera_t * Camera, model_t * render_target, unsigned int * PixelBuffer);
+void render_image(camera_t * Camera, model_t ** model_list, int model_count, unsigned int * PixelBuffer);
 
 #endif

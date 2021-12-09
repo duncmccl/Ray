@@ -126,12 +126,15 @@ model_t * aggregate_models(model_t ** model_list, int model_count) {
 	
 	for(int i = 0; i < model_count; i++) {
 		
-		memcpy(rtn->vec_list + vec_offset, model_list[i]->vec_list, sizeof(vec_t) * model_list[i]->vec_count);
+		model_t * tmp = copy_model(model_list[i]);
+		transform_model(tmp);
 		
-		memcpy(rtn->primitive_list + primitive_offset, model_list[i]->primitive_list, sizeof(primitive_t) * model_list[i]->primitive_count);
+		memcpy(rtn->vec_list + vec_offset, tmp->vec_list, sizeof(vec_t) * tmp->vec_count);
+		
+		memcpy(rtn->primitive_list + primitive_offset, tmp->primitive_list, sizeof(primitive_t) * tmp->primitive_count);
 		
 		#pragma omp parallel for
-		for(int j = primitive_offset; j < primitive_offset + model_list[i]->primitive_count; j++) {
+		for(int j = primitive_offset; j < primitive_offset + tmp->primitive_count; j++) {
 			
 			switch (rtn->primitive_list[j].type) {
 				case TRIANGLE:
@@ -156,10 +159,16 @@ model_t * aggregate_models(model_t ** model_list, int model_count) {
 			
 		}
 		
-		vec_offset += model_list[i]->vec_count;
-		primitive_offset += model_list[i]->primitive_count;
+		vec_offset += tmp->vec_count;
+		primitive_offset += tmp->primitive_count;
 		
+		destroy_model(tmp);
 	}
+	
+	rtn->basis.i = (vec_t){1.0f, 0.0f, 0.0f};
+	rtn->basis.j = (vec_t){0.0f, 1.0f, 0.0f};
+	rtn->basis.k = (vec_t){0.0f, 0.0f, 1.0f};
+	rtn->basis.l = (vec_t){0.0f, 0.0f, 0.0f};
 	
 	return rtn;
 	
@@ -177,10 +186,12 @@ model_t * copy_model(model_t * target) {
 	rtn->primitive_list = (primitive_t *) malloc(sizeof(primitive_t) * rtn->primitive_count);
 	memcpy(rtn->primitive_list, target->primitive_list, sizeof(primitive_t) * rtn->primitive_count);
 	
+	rtn->basis = target->basis;
+	
 	return rtn;
 }
 
-void trans_rotate_model(model_t * target, vec_t * look, vec_t * up, vec_t * right, vec_t * pos) {
+void transform_model(model_t * target) {
 	
 	#pragma omp parallel for
 	for(int i = 0; i < target->vec_count; i++) {
@@ -188,13 +199,19 @@ void trans_rotate_model(model_t * target, vec_t * look, vec_t * up, vec_t * righ
 		vec_t * old = target->vec_list +i;
 		
 		vec_t new_vec = (vec_t){
-			(old->x * look->x) + (old->y * up->x) + (old->z * right->x) + pos->x,
-			(old->x * look->y) + (old->y * up->y) + (old->z * right->y) + pos->y,
-			(old->x * look->z) + (old->y * up->z) + (old->z * right->z) + pos->z
+			(old->x * target->basis.i.x) + (old->y * target->basis.j.x) + (old->z * target->basis.k.x) + target->basis.l.x,
+			(old->x * target->basis.i.y) + (old->y * target->basis.j.y) + (old->z * target->basis.k.y) + target->basis.l.y,
+			(old->x * target->basis.i.z) + (old->y * target->basis.j.z) + (old->z * target->basis.k.z) + target->basis.l.z
 		};
 		
 		*old = new_vec;
 	}
+	
+	target->basis.i = (vec_t){1.0f, 0.0f, 0.0f};
+	target->basis.j = (vec_t){0.0f, 1.0f, 0.0f};
+	target->basis.k = (vec_t){0.0f, 0.0f, 1.0f};
+	target->basis.l = (vec_t){0.0f, 0.0f, 0.0f};
+	
 }
 
 void destroy_model(model_t * model) {

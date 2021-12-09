@@ -318,7 +318,12 @@ unsigned int color_to_int(color_t color) {
 	
 }
 
-void render_image(camera_t * Camera, model_t * render_target, unsigned int * PixelBuffer) {
+void render_image(camera_t * Camera, model_t ** model_list, int model_count, unsigned int * PixelBuffer) {
+	
+	
+	
+	model_t * render_target = aggregate_models(model_list, model_count);
+	
 	
 	bvh_t * bvh = build_bvh(render_target, 16, 8);
 	
@@ -332,19 +337,20 @@ void render_image(camera_t * Camera, model_t * render_target, unsigned int * Pix
 		float Pitch = (Camera->vFOV / (float)Camera->vRES) * y - (Camera->vFOV / 2.0f);
 		float Yaw = (Camera->hFOV / 2.0f) - (Camera->hFOV / (float)Camera->hRES) * x;
 
-		vec_t axis = vec_add(vec_scale(Camera->up, Yaw), vec_scale(Camera->right, Pitch));
+		vec_t axis = vec_add(vec_scale(Camera->basis.j, Yaw), vec_scale(Camera->basis.k, Pitch));
 		float im = 1.0f / sqrt(vec_dot(axis, axis));
 		axis = vec_scale(axis, im);
 
-		vec_t RayDir = vec_rotate(Camera->look, axis, sqrt(Yaw*Yaw + Pitch*Pitch));
+		vec_t RayDir = vec_rotate(Camera->basis.i, axis, sqrt(Yaw*Yaw + Pitch*Pitch));
 
 		color_t color = (color_t){0.0, 0.0, 0.0, 0.0};
-		trace_ray(&Camera->pos, &RayDir, bvh, render_target->vec_list, &color);
+		trace_ray(&(Camera->basis.l), &RayDir, bvh, render_target->vec_list, &color);
 
 		PixelBuffer[x + y * Camera->hRES] = color_to_int(color);
 
 	}
 	
 	destroy_bvh(bvh);
+	destroy_model(render_target);
 	
 }
